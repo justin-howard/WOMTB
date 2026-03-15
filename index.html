@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1c1810">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="The Wise Old Man's Task Board — an OSRS activity generator, trivia challenge, and learning tool for Old School RuneScape players of every level.">
 <title>The Wise Old Man's Task Board | OSRS Activity Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,8 +40,8 @@
   --cyan:     #00cccc;
   --purple:   #aa66ff;
 }
-html{font-size:16px;}
-*{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:rgba(201,168,76,.2);}
 body{
   background:#1c1810;
   background-image:
@@ -49,7 +53,19 @@ body{
   color:var(--tan);
   min-height:100vh;
   line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  /* Safe area insets for notched phones / Steam Deck overlay */
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+  padding-bottom:env(safe-area-inset-bottom);
 }
+/* Buttons: no double-tap zoom on mobile, comfortable touch targets */
+button{touch-action:manipulation;-webkit-tap-highlight-color:rgba(201,168,76,.2);}
+/* Inputs don't zoom on iOS (font-size 16px prevents it) */
+input,select,textarea{font-size:16px !important;}
+/* Smooth momentum scroll in panels */
+.panel{-webkit-overflow-scrolling:touch;}
 
 /* =====================================================================
    UTILITY
@@ -130,12 +146,7 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
   position:relative;
 }
 /* decorative corner gems */
-.site-header::before,.site-header::after{
-  content:'';position:absolute;top:16px;width:8px;height:8px;
-  background:var(--gold2);transform:rotate(45deg);
-}
-.site-header::before{left:16px;}
-.site-header::after{right:16px;}
+.site-header::before,.site-header::after{display:none;}
 
 /* NPC dialogue box */
 .wom-row{display:flex;justify-content:center;margin-bottom:1.3rem;}
@@ -157,12 +168,12 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 .osrs-dialogue-titlebar::before{content:'';width:8px;height:8px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
 .osrs-dialogue-body{display:flex;min-height:140px;}
 .osrs-npc-portrait{
-  width:144px;flex-shrink:0;background:#100c06;
+  width:clamp(90px,20vw,144px);flex-shrink:0;background:#100c06;
   border-right:2px solid #181008;display:flex;
-  align-items:flex-end;justify-content:center;overflow:hidden;position:relative;
+  align-items:stretch;justify-content:center;overflow:hidden;position:relative;
 }
 .osrs-npc-portrait::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 24px rgba(0,0,0,0.75);pointer-events:none;}
-.wom-photo{width:144px;height:165px;object-fit:cover;object-position:center top;display:block;}
+.wom-photo{width:100%;height:100%;min-height:140px;object-fit:cover;object-position:center 15%;display:block;}
 .osrs-dialogue-text{flex:1;padding:1rem 1.1rem .8rem;display:flex;flex-direction:column;justify-content:space-between;gap:.6rem;}
 .osrs-npc-speech{font-family:'IM Fell English',serif;font-size:1.15rem;color:var(--white);line-height:1.65;min-height:60px;transition:opacity .15s;}
 .osrs-click-prompt{font-family:'Press Start 2P',monospace;font-size:.42rem;color:#9a8050;letter-spacing:.5px;animation:blink 1.4s steps(2) infinite;text-align:right;transition:color .2s;}
@@ -221,16 +232,23 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 ===================================================================== */
 .filter-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1.1rem;}
 .filter-chip{
-  display:flex;align-items:center;gap:5px;padding:5px 11px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;padding:5px 11px 5px 10px;cursor:pointer;
   font-family:'Crimson Text',serif;font-size:.95rem;user-select:none;
-  transition:opacity .1s;
+  transition:opacity .1s;white-space:nowrap;
   border-top:1px solid var(--bv-lt);border-left:1px solid var(--bv-lt);
   border-bottom:1px solid var(--bv-dk);border-right:1px solid var(--bv-dk);
+  -webkit-appearance:none;appearance:none;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 .filter-chip.on{color:var(--green);background:var(--bg2);}
 .filter-chip.off{color:var(--red);background:var(--bg);}
 .filter-chip:hover{opacity:.8;}
-.chip-dot{width:6px;height:6px;flex-shrink:0;}
+.chip-dot{
+  width:7px;height:7px;min-width:7px;min-height:7px;
+  display:block;flex-shrink:0;flex-grow:0;align-self:center;
+  border-radius:0;
+}
 .filter-chip.on .chip-dot{background:var(--green);}
 .filter-chip.off .chip-dot{background:var(--red);}
 
@@ -506,101 +524,76 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 /* =====================================================================
    DAILY CHALLENGE PANEL
 ===================================================================== */
-.daily-date-bar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:.7rem 1rem;margin-bottom:1.3rem;
-  background:var(--bg2);
-  border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);
-  border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);
-  outline:1px solid var(--bv-mid);flex-wrap:wrap;gap:8px;
-}
+.daily-date-bar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;margin-bottom:1.3rem;background:var(--bg2);border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);outline:1px solid var(--bv-mid);flex-wrap:wrap;gap:8px;}
 .daily-date-label{font-family:'Press Start 2P',monospace;font-size:.48rem;color:var(--gold);text-shadow:1px 1px 0 #000;letter-spacing:.5px;}
 .daily-streak{display:flex;align-items:center;gap:8px;}
 .daily-streak-val{font-family:'Press Start 2P',monospace;font-size:.52rem;color:var(--orange);text-shadow:1px 1px 0 #000;}
 .daily-streak-label{font-family:'Crimson Text',serif;font-size:.9rem;color:var(--muted);}
-
-.daily-card{
-  background:var(--bg2);
-  border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);
-  border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);
-  outline:1px solid var(--bv-mid);padding:1.4rem 1.6rem;
-  position:relative;overflow:hidden;
-}
-.daily-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--gold3),var(--gold),var(--gold3));
-}
-.daily-wom-intro{
-  font-family:'IM Fell English',serif;font-style:italic;
-  font-size:1rem;color:var(--muted);margin-bottom:1rem;
-  padding-bottom:.8rem;border-bottom:1px solid var(--bv-mid);
-}
+.daily-card{background:var(--bg2);border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);outline:1px solid var(--bv-mid);padding:1.4rem 1.6rem;position:relative;overflow:hidden;}
+.daily-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold3),var(--gold),var(--gold3));}
+.daily-wom-intro{font-family:'IM Fell English',serif;font-style:italic;font-size:1rem;color:var(--muted);margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid var(--bv-mid);}
+.daily-req{font-family:'Press Start 2P',monospace;font-size:.42rem;padding:5px 10px;margin-bottom:.8rem;display:inline-block;background:rgba(255,155,0,.08);border-left:2px solid var(--orange);color:var(--orange);letter-spacing:.3px;}
 .daily-meta{display:flex;align-items:center;gap:6px;margin-bottom:.7rem;flex-wrap:wrap;}
 .daily-title{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--gold);line-height:1.9;margin-bottom:.6rem;text-shadow:1px 1px 0 #000;}
 .daily-desc{font-family:'Crimson Text',serif;font-size:1.15rem;color:var(--tan);line-height:1.7;}
 .daily-tip{margin-top:.8rem;padding:.6rem .9rem;font-family:'Crimson Text',serif;font-size:1.05rem;font-style:italic;color:var(--cyan);background:rgba(0,180,180,.07);border-left:3px solid var(--cyan);}
-
 .daily-actions{display:flex;gap:8px;margin-top:1.1rem;flex-wrap:wrap;}
-.daily-complete-btn{
-  font-family:'Press Start 2P',monospace;font-size:.52rem;padding:11px 22px;
-  cursor:pointer;color:#000;
-  background:linear-gradient(180deg,#60a020 0%,#3a6010 100%);
-  border-top:3px solid #90d040;border-left:3px solid #90d040;
-  border-bottom:3px solid #1a3808;border-right:3px solid #1a3808;
-  text-shadow:none;letter-spacing:.5px;transition:all .1s;
-}
+.daily-complete-btn{font-family:'Press Start 2P',monospace;font-size:.52rem;padding:11px 22px;cursor:pointer;color:#000;background:linear-gradient(180deg,#60a020 0%,#3a6010 100%);border-top:3px solid #90d040;border-left:3px solid #90d040;border-bottom:3px solid #1a3808;border-right:3px solid #1a3808;text-shadow:none;letter-spacing:.5px;transition:all .1s;}
 .daily-complete-btn:hover{background:linear-gradient(180deg,#78c030 0%,#4a7818 100%);}
 .daily-complete-btn:active{border-top-color:#1a3808;border-left-color:#1a3808;border-bottom-color:#90d040;border-right-color:#90d040;transform:translateY(1px);}
 .daily-complete-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-
-.daily-guide-btn{
-  font-family:'Press Start 2P',monospace;font-size:.44rem;padding:11px 14px;
-  cursor:pointer;color:var(--cyan);background:var(--bg);
-  border-top:2px solid #406878;border-left:2px solid #406878;
-  border-bottom:2px solid #101e28;border-right:2px solid #102030;
-  letter-spacing:.5px;text-shadow:1px 1px 0 #000;transition:color .1s;
-}
+.daily-guide-btn{font-family:'Press Start 2P',monospace;font-size:.44rem;padding:11px 14px;cursor:pointer;color:var(--cyan);background:var(--bg);border-top:2px solid #406878;border-left:2px solid #406878;border-bottom:2px solid #101e28;border-right:2px solid #102030;letter-spacing:.5px;text-shadow:1px 1px 0 #000;transition:color .1s;}
 .daily-guide-btn:hover{color:#b0f0ff;background:#0a1c28;}
-
-.daily-done-banner{
-  display:none;margin-top:1rem;padding:1rem 1.2rem;
-  background:rgba(0,100,0,0.15);
-  border-top:2px solid var(--green2);border-left:2px solid var(--green2);
-  border-bottom:2px solid #001a00;border-right:2px solid #001a00;
-  text-align:center;
-}
+.daily-done-banner{display:none;margin-top:1rem;padding:1rem 1.2rem;background:rgba(0,100,0,.15);border-top:2px solid var(--green2);border-left:2px solid var(--green2);border-bottom:2px solid #001a00;border-right:2px solid #001a00;text-align:center;}
 .daily-done-banner.show{display:block;animation:rsReveal .3s ease;}
 .daily-done-title{font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--green);text-shadow:1px 1px 0 #000;margin-bottom:.5rem;letter-spacing:.5px;}
 .daily-done-msg{font-family:'IM Fell English',serif;font-style:italic;font-size:1rem;color:var(--tan2);line-height:1.6;}
-
-.daily-guide-panel{
-  margin-top:1rem;background:var(--bg);
-  border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);
-  border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);
-  outline:1px solid var(--bv-mid);padding:1.1rem 1.2rem;display:none;
-}
+.daily-guide-panel{margin-top:1rem;background:var(--bg);border-top:2px solid var(--bv-dk);border-left:2px solid var(--bv-dk);border-bottom:2px solid var(--bv-lt);border-right:2px solid var(--bv-lt);outline:1px solid var(--bv-mid);padding:1.1rem 1.2rem;display:none;}
 .daily-guide-panel.open{display:block;animation:gSlide .2s ease;}
-
 .daily-history{margin-top:1.4rem;}
 .daily-history-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:.7rem;}
-.day-dot{
-  aspect-ratio:1;border-radius:2px;
+.day-dot{aspect-ratio:1;border-radius:2px;border-top:1px solid var(--bv-lt);border-left:1px solid var(--bv-lt);border-bottom:1px solid var(--bv-dk);border-right:1px solid var(--bv-dk);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--muted);background:var(--bg);position:relative;}
+.day-dot.completed{background:rgba(0,100,0,.25);color:var(--green);border-top-color:var(--green2);border-left-color:var(--green2);}
+.day-dot.today{outline:2px solid var(--gold);outline-offset:1px;}
+
+/* =====================================================================
+   MARK AS DONE SYSTEM
+===================================================================== */
+.done-btn{
+  font-family:'Press Start 2P',monospace;font-size:.42rem;padding:6px 12px;
+  cursor:pointer;letter-spacing:.4px;transition:all .15s;
   border-top:1px solid var(--bv-lt);border-left:1px solid var(--bv-lt);
   border-bottom:1px solid var(--bv-dk);border-right:1px solid var(--bv-dk);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Press Start 2P',monospace;font-size:.3rem;
-  color:var(--muted);background:var(--bg);
-  cursor:default;transition:all .15s;
-  position:relative;
+  text-shadow:1px 1px 0 #000;
 }
-.day-dot.completed{background:rgba(0,100,0,0.25);color:var(--green);border-top-color:var(--green2);border-left-color:var(--green2);}
-.day-dot.today{outline:2px solid var(--gold);outline-offset:1px;}
-.day-dot[title]:hover::after{
-  content:attr(title);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
-  background:var(--bg2);border:1px solid var(--bv-mid);padding:3px 7px;
-  font-family:'Crimson Text',serif;font-size:.75rem;color:var(--tan);
-  white-space:nowrap;z-index:10;pointer-events:none;
+.done-btn.undone{color:var(--muted);background:var(--bg);}
+.done-btn.undone:hover{color:var(--green);border-color:var(--green2);}
+.done-btn.isdone{
+  color:var(--green);background:rgba(0,80,0,.2);
+  border-top-color:var(--green2);border-left-color:var(--green2);
+  border-bottom-color:#001800;border-right-color:#001800;
 }
+.result-card.task-done::after{
+  content:'COMPLETED';position:absolute;top:10px;right:10px;
+  font-family:'Press Start 2P',monospace;font-size:.36rem;
+  color:var(--green);background:rgba(0,80,0,.25);
+  border:1px solid var(--green2);padding:3px 7px;
+  letter-spacing:.5px;opacity:.8;pointer-events:none;
+}
+.result-card{position:relative;}
+.done-counter{
+  font-family:'Press Start 2P',monospace;font-size:.42rem;
+  color:var(--green);text-shadow:1px 1px 0 #000;
+  padding:4px 10px;margin-left:auto;
+  background:rgba(0,80,0,.15);
+  border-top:1px solid var(--green2);border-left:1px solid var(--green2);
+  border-bottom:1px solid #001800;border-right:1px solid #001800;
+  display:none;
+}
+.done-counter.visible{display:inline-block;}
+.filter-chip.hide-done-chip{border-color:var(--gold3);}
+.filter-chip.hide-done-chip.on{color:var(--gold);border-color:var(--gold2);}
+.filter-chip.hide-done-chip.on .chip-dot{background:var(--gold);}
 
 /* =====================================================================
    FOOTER
@@ -622,15 +615,205 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 ::-webkit-scrollbar-thumb{background:var(--bv-mid);border:1px solid var(--bv-dk);}
 
 /* =====================================================================
-   RESPONSIVE
+   RESPONSIVE — 5-target system
+   Desktop:     900px+
+   Laptop:      700–899px
+   Steam Deck:  600–699px  (800×600 viewport landscape, gamepad nav)
+   Tablet:      480–599px
+   Mobile:      0–479px
 ===================================================================== */
-@media(max-width:540px){
+
+/* ---- GLOBAL fluid base ---- */
+.main{padding:0 clamp(8px,2.5vw,16px) 5rem;}
+.panel{padding:clamp(1rem,2.5vw,1.6rem);}
+.result-card{padding:clamp(.9rem,2vw,1.3rem) clamp(1rem,2.5vw,1.5rem);}
+.trivia-card{padding:clamp(1rem,2.5vw,1.3rem) clamp(1rem,2.5vw,1.5rem);}
+
+/* ---- WOM portrait scales down gracefully ---- */
+.wom-photo{width:100%;height:100%;min-height:100px;object-fit:cover;object-position:center 15%;}
+.osrs-dialogue{max-width:min(680px,100%);}
+
+/* ---- Nav tabs: scrollable on narrow screens ---- */
+.nav-tabs{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  gap:3px;
+  padding-bottom:2px;
+}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{white-space:nowrap;flex-shrink:0;}
+
+/* ---- Filter chips and diff row wrap cleanly ---- */
+.filter-grid{gap:clamp(4px,1vw,6px);}
+.filter-chip{font-size:clamp(.82rem,.9rem + .1vw,.95rem);}
+.diff-row{gap:clamp(4px,1vw,5px);}
+
+/* ---- Roll button stays large enough to tap comfortably ---- */
+.roll-btn{
+  padding:clamp(12px,2vw,15px) clamp(18px,4vw,36px);
+  font-size:clamp(.58rem,.65rem + .1vw,.7rem);
+  min-height:48px;
+}
+
+/* ---- Hint + done buttons: always big enough to tap ---- */
+.hint-btn,.done-btn{min-height:44px;padding:clamp(6px,1.5vw,8px) clamp(10px,2vw,13px);}
+.daily-complete-btn,.daily-guide-btn{min-height:48px;}
+
+/* ---- Guide steps readable at all sizes ---- */
+.guide-num{font-size:clamp(.38rem,.44rem + .05vw,.45rem);}
+.guide-text{font-size:clamp(1rem,1.05rem + .1vw,1.1rem);}
+
+/* ---- Trivia options ---- */
+.trivia-question{font-size:clamp(1.05rem,1.2rem + .15vw,1.25rem);}
+.trivia-opt{
+  font-size:clamp(.95rem,1.05rem + .1vw,1.08rem);
+  padding:clamp(9px,1.5vw,11px) clamp(10px,2vw,14px);
+  min-height:48px;
+}
+
+/* ---- Daily history grid: always 7 cols but dots can shrink ---- */
+.daily-history-grid{gap:clamp(3px,.8vw,5px);}
+.day-dot{font-size:clamp(.22rem,.3rem + .05vw,.3rem);}
+
+/* ---- Supporter tiers ---- */
+.tiers-grid{grid-template-columns:repeat(auto-fit,minmax(clamp(160px,28vw,200px),1fr));}
+
+/* ---- Stats ribbon wraps ---- */
+.stats-ribbon{gap:0;flex-wrap:wrap;}
+.stat-pill{font-size:clamp(.35rem,.42rem + .05vw,.42rem);}
+
+/* ---- Accessibility menu: never overflow viewport ---- */
+.a11y-menu{max-width:min(248px,calc(100vw - 28px));}
+
+/* ====================
+   LAPTOP  700–899px
+==================== */
+@media(max-width:899px){
+  .site-title{font-size:clamp(.95rem,2.5vw,1.4rem);}
+  .osrs-dialogue-titlebar{font-size:.44rem;}
+  .osrs-npc-speech{font-size:1rem;}
+  .result-title{font-size:.65rem;}
+  .daily-title{font-size:.65rem;}
+}
+
+/* ====================
+   STEAM DECK  600–699px
+   800×600 landscape, thumb pad navigation
+==================== */
+@media(max-width:699px){
+  /* Bigger tap targets for thumbstick precision */
+  .nav-tab{padding:10px 16px;font-size:.46rem;}
+  .rs-btn{padding:9px 14px;font-size:.44rem;}
+  .filter-chip{padding:6px 11px;font-size:.88rem;}
+  .roll-btn{min-height:54px;font-size:.6rem;}
+  .hint-btn,.done-btn{min-height:50px;font-size:.4rem;}
+  .daily-complete-btn{min-height:54px;font-size:.48rem;}
+  .trivia-opt{min-height:54px;}
+  .a11y-trigger{width:46px;height:46px;font-size:22px;}
+  /* Portrait shrinks a bit more */
+  .osrs-npc-portrait{width:100px;}
+  .wom-photo{width:100%;height:100%;object-fit:cover;}
+  /* Site title comfortable at 800px wide */
+  .site-title{font-size:1.1rem;}
+  .stats-ribbon{justify-content:center;}
+}
+
+/* ====================
+   TABLET  480–599px
+==================== */
+@media(max-width:599px){
+  .site-title{font-size:.85rem;letter-spacing:.5px;}
+  .site-sub{font-size:.9rem;}
+  /* Stack portrait above speech */
+  .osrs-dialogue-body{flex-direction:column;}
+  .osrs-npc-portrait{
+    width:100%;height:140px;
+    border-right:none;border-bottom:2px solid #181008;
+    align-items:stretch;
+  }
+  .wom-photo{width:100%;height:140px;object-fit:cover;object-position:center 15%;}
+  .osrs-npc-speech{font-size:.95rem;}
+  .osrs-click-prompt{font-size:.36rem;}
+  /* Single-column trivia options */
   .trivia-options{grid-template-columns:1fr;}
-  .site-title{font-size:.8rem;}
-  .panel{padding:1.1rem;}
-  .roll-btn{padding:12px 20px;font-size:.58rem;}
+  /* Single-column tiers */
   .tiers-grid{grid-template-columns:1fr;}
-  .about-stat-grid{grid-template-columns:repeat(2,1fr);}
+  /* Result title smaller */
+  .result-title{font-size:.58rem;line-height:1.8;}
+  .daily-title{font-size:.58rem;line-height:1.8;}
+  /* Hint row stacks */
+  .hint-row{flex-direction:column;gap:6px;}
+  .hint-btn,.done-btn{width:100%;text-align:center;}
+  /* Daily actions stack */
+  .daily-actions{flex-direction:column;}
+  .daily-complete-btn,.daily-guide-btn{width:100%;text-align:center;}
+  /* Filter extra row stacks */
+  .filter-extra{flex-direction:column;align-items:flex-start;}
+  /* Panel padding tightens */
+  .panel{padding:.9rem;}
+  /* Done counter full width */
+  .done-counter{margin-left:0;}
+  /* Stats ribbon vertical */
+  .stats-ribbon{flex-direction:column;align-items:center;gap:4px;}
+  .stat-pill{border-left:none;padding:2px 8px;}
+}
+
+/* ====================
+   MOBILE  0–479px
+==================== */
+@media(max-width:479px){
+  /* Header breathes */
+  .site-header{padding:1.2rem .75rem 1rem;}
+  .site-title{font-size:.72rem;letter-spacing:.5px;line-height:1.5;}
+  .site-sub{font-size:.82rem;}
+  /* Dialogue even more compact */
+  .osrs-dialogue-titlebar{font-size:.42rem;padding:4px 8px;}
+  .osrs-npc-portrait{height:120px;width:100%;}
+  .wom-photo{width:100%;height:120px;object-fit:cover;object-position:center 15%;}
+  .osrs-npc-speech{font-size:.9rem;line-height:1.5;}
+  .osrs-dialogue-text{padding:.7rem .8rem .6rem;}
+  .osrs-click-prompt{font-size:.32rem;}
+  /* Nav tabs smaller */
+  .nav-tab{padding:8px 11px;font-size:.42rem;}
+  /* Roll button full width */
+  .roll-area{padding:0 0;}
+  .roll-btn{width:100%;font-size:.55rem;padding:14px 10px;}
+  /* Result card tighter */
+  .result-title{font-size:.52rem;line-height:1.75;}
+  .result-desc{font-size:1rem;}
+  .rs-badge{font-size:.35rem;padding:2px 5px;}
+  /* Guide steps */
+  .guide-num{min-width:18px;padding:2px 4px;}
+  .guide-text{font-size:.95rem;}
+  /* Trivia */
+  .trivia-question{font-size:1rem;}
+  .trivia-opt{font-size:.95rem;}
+  .score-label{font-size:.44rem;}
+  .streak-label{font-size:.4rem;}
+  /* Daily */
+  .daily-title{font-size:.52rem;}
+  .daily-desc{font-size:1rem;}
+  .daily-date-label{font-size:.4rem;}
+  .daily-streak-val{font-size:.44rem;}
+  .daily-req{font-size:.36rem;}
+  /* Supporter tiers */
+  .tier-name{font-size:.44rem;}
+  .tier-price{font-size:.52rem;}
+  .tier-perks li{font-size:.82rem;}
+  .tier-btn{font-size:.38rem;padding:8px;}
+  /* History grid dots smaller text but keep grid */
+  .day-dot{font-size:.2rem;}
+  /* Accessibility trigger repositions to not crowd title */
+  .a11y-trigger{top:10px;right:10px;width:36px;height:36px;font-size:17px;}
+  .a11y-menu{top:54px;right:10px;}
+  /* Modal full width */
+  .modal-box{max-width:calc(100vw - 24px);}
+  /* Footer wraps nicely */
+  .site-footer{font-size:.32rem;line-height:2.2;}
+  /* Wall names wrap */
+  .wall-names{gap:5px;}
+  .wall-name{font-size:.82rem;}
 }
 </style>
 </head>
@@ -662,11 +845,15 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
       <button class="modal-close" onclick="closeModal()">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <h3 id="modalHeading">Join the Adventure</h3>
-      <p id="modalDesc">Your name will be displayed on the Supporters Wall and you'll get a unique badge next to your name everywhere on the site.</p>
-      <input class="modal-input" id="modalName" type="text" placeholder="Your in-game name..." maxlength="20" />
-      <button class="modal-submit" onclick="submitSupporter()" id="modalSubmit">Claim Your Place &#9758;</button>
-      <p class="modal-note">This is a demo of how supporter checkout would work. No real payment is processed.</p>
+      <h3 id="modalHeading">Support the Site</h3>
+      <p id="modalDesc">Head to Ko-fi and leave your in-game name in the message. We'll add you to the Supporters Wall within 24 hours.</p>
+      <div id="modalKofiSection">
+        <button class="modal-submit" id="modalKofiBtn" onclick="window.open(window._kofiUrl||'https://ko-fi.com/osrstaskboard','_blank');closeModal()">Open Ko-fi &#9758;</button>
+        <p class="modal-note">Leave your in-game name in the Ko-fi message so we know who to add to the wall.</p>
+      </div>
+      <div id="modalFreeSection" style="display:none">
+        <button class="modal-submit" onclick="closeModal()">Got it ✓</button>
+      </div>
     </div>
   </div>
 </div>
@@ -679,13 +866,13 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
       <div class="osrs-dialogue-body">
         <div class="osrs-npc-portrait">
 <img
-          src="data:image/png;base64,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"
+          src="data:image/jpeg;base64,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"
           alt="The Wise Old Man"
           class="wom-photo"
         />
         </div>
         <div class="osrs-dialogue-text">
-          <div class="osrs-npc-speech" id="womQuote">Greetings. I've spent most of my life studying this world. Now I'm not as young as I used to be, I'm settling here where it's peaceful. But I can still point you in the right direction.</div>
+          <div class="osrs-npc-speech" id="womQuote">Greetings. I'm sure I can think of a few little jobs. This won't be a quest, mind you. Just a little favour.</div>
           <div class="osrs-click-prompt">Click to continue</div>
         </div>
       </div>
@@ -713,6 +900,12 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
   <div class="panel active" id="panel-generator">
     <div class="rs-label">What are you up to? (toggle to exclude)</div>
     <div class="filter-grid" id="filterGrid"></div>
+    <div class="filter-extra" style="display:flex;align-items:center;gap:6px;margin-bottom:.9rem;flex-wrap:wrap;">
+      <button class="filter-chip hide-done-chip off" id="hideDoneChip" onclick="toggleHideDone()">
+        <span class="chip-dot"></span>Hide Completed Tasks
+      </button>
+      <span class="done-counter" id="doneCounter">0 completed</span>
+    </div>
     <div class="diff-row">
       <div class="rs-label" style="margin-bottom:0;margin-right:4px;">How tough are ya:</div>
       <button class="rs-btn active-all" id="diff-all"  onclick="setDiff('all')">All</button>
@@ -730,8 +923,11 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
         <div class="result-title" id="resultTitle"></div>
         <div class="result-desc"  id="resultDesc"></div>
         <div class="result-tip"   id="resultTip" style="display:none"></div>
-        <div class="hint-row"     id="hintRow" style="display:none">
+        <div class="hint-row" id="hintRow" style="display:none">
           <button class="hint-btn" onclick="toggleGuide()" id="hintBtn">? Ask the old man for help</button>
+        </div>
+        <div class="hint-row" id="doneRow" style="display:none">
+          <button class="done-btn undone" onclick="toggleTaskDone()" id="doneBtn">&#10003; Mark Done</button>
         </div>
         <div class="guide-panel" id="guidePanel">
           <div class="guide-header">The old man leans forward...</div>
@@ -765,10 +961,10 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
   <!-- ===== SUPPORT PANEL ===== -->
   <div class="panel" id="panel-supporter">
     <div class="supporter-intro">
-      <div class="supporter-coin">🪙</div>
+      <div class="supporter-coin">☕</div>
       <div class="supporter-intro-text">
         <h3>Keep the Site Running</h3>
-        <p>This site is built and maintained by a single developer who also plays OSRS. If it's helped you find something to do or taught you something about the game, consider throwing a coin in the well. Every tier gets your name on the Supporters Wall and a badge next to your handle.</p>
+        <p>This site is built and maintained by a single developer who also plays OSRS. If it's helped you find something to do or taught you something about the game, consider buying a coffee on Ko-fi. Paid tiers get your name on the Supporters Wall. No account needed, Ko-fi takes 0% on tips.</p>
       </div>
     </div>
 
@@ -779,11 +975,10 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
         <div class="tier-name">Adventurer</div>
         <div class="tier-price">Free <span>/ always</span></div>
         <ul class="tier-perks">
-          <li>All 93 tasks with step-by-step guides</li>
+          <li>Full access to all 93 tasks</li>
           <li>All 29 trivia questions</li>
-          <li>Category and difficulty filters</li>
-          <li>Full accessibility suite</li>
-          <li>Task history tracker</li>
+          <li>Step-by-step guides</li>
+          <li>Accessibility tools</li>
         </ul>
         <button class="tier-btn tier-btn-free" onclick="openModal('free')">You already have this</button>
       </div>
@@ -792,28 +987,27 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
         <div class="tier-badge">Most Popular</div>
         <div class="tier-icon">⚔️</div>
         <div class="tier-name">Supporter</div>
-        <div class="tier-price">£2 <span>/ one-time</span></div>
+        <div class="tier-price">$2 <span>/ one-time</span></div>
         <ul class="tier-perks">
           <li>Everything in Adventurer</li>
           <li>Your name on the Supporters Wall</li>
           <li>Gold badge next to your name</li>
           <li>Keeps the site running and ad-free</li>
         </ul>
-        <button class="tier-btn tier-btn-paid" onclick="openModal('supporter')">Support the Site &#9758;</button>
+        <button class="tier-btn tier-btn-paid" onclick="window.open('https://ko-fi.com/summary/7049cb60-91e5-4801-b678-75526c62eef7','_blank')">Support on Ko-fi &#9758;</button>
       </div>
       <!-- LEGEND -->
       <div class="tier-card">
         <div class="tier-icon">💎</div>
         <div class="tier-name">Legend</div>
-        <div class="tier-price">£8 <span>/ one-time</span></div>
+        <div class="tier-price">$5 <span>/ one-time</span></div>
         <ul class="tier-perks">
           <li>Everything in Supporter</li>
           <li>Purple name on the Wall</li>
           <li>Legend badge next to your name</li>
-          <li>Your name in the site footer credits</li>
-          <li>Submit a task suggestion via email</li>
+          <li>Submit a task suggestion via Ko-fi DMs</li>
         </ul>
-        <button class="tier-btn tier-btn-paid" onclick="openModal('legend')">Become a Legend &#9758;</button>
+        <button class="tier-btn tier-btn-paid" onclick="window.open('https://ko-fi.com/summary/5ac3af1d-0bb9-4a62-bb90-b9da8f70ad16','_blank')">Support on Ko-fi &#9758;</button>
       </div>
     </div>
 
@@ -827,7 +1021,6 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 
   <!-- ===== DAILY CHALLENGE PANEL ===== -->
   <div class="panel" id="panel-daily">
-
     <div class="daily-date-bar">
       <div class="daily-date-label" id="dailyDateLabel">Today's Challenge</div>
       <div class="daily-streak">
@@ -835,9 +1028,9 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
         <div class="daily-streak-label">day streak 🔥</div>
       </div>
     </div>
-
     <div class="daily-card" id="dailyCard">
       <div class="daily-wom-intro" id="dailyWomIntro">Greetings. I've been thinking about what to send you on today...</div>
+      <div class="daily-req" id="dailyReq" style="display:none"></div>
       <div class="daily-meta" id="dailyMeta"></div>
       <div class="daily-title" id="dailyTitle"></div>
       <div class="daily-desc"  id="dailyDesc"></div>
@@ -856,15 +1049,15 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
         <div class="guide-note" id="dailyGuideNote" style="display:none"></div>
       </div>
     </div>
-
     <div class="daily-history">
       <div class="rs-label">Last 28 Days</div>
       <div class="daily-history-grid" id="dailyHistoryGrid"></div>
     </div>
-
   </div>
 
 </div>
+
+<footer class="site-footer">
   Fan-made &nbsp;|&nbsp; Not affiliated with Jagex &nbsp;|&nbsp;
   Built with ❤ for the OSRS community &nbsp;|&nbsp;
 <a href="#" onclick="switchTab('supporter', document.querySelector('.nav-tab:nth-child(3)'));return false;">Support Us</a>
@@ -1077,13 +1270,13 @@ const TRIVIA=[
 
 const WOM_QUOTES=[
   "Greetings. I'm sure I can think of a few little jobs. This won't be a quest, mind you. Just a little favour.",
-  "I've strode through the depths of the deadliest dungeons, roamed the murky jungles of Karamja... and now I sit here giving tasks to people like you. Such is life.",
+  "I've strode through the depths of the deadliest dungeons, roamed the murky jungles of Karamja, meditated on the glories of Saradomin on Entrana... and now I sit here giving tasks to people like you. Such is life.",
   "Less of the 'old' man, if you please. I prefer to think of myself as a sage.",
   "Now I'm not as young as I used to be, I'm settling here where it's peaceful. But I can still point you in the right direction.",
   "Deary deary me. You've come all this way to ask me what to do? Very well. Here's something useful.",
   "I've spent most of my life studying this world. I've read some dusty tomes in the Library of Varrock. I have opinions. Press the button.",
   "Ah, there's always wonder and excitement waiting in the world... although sometimes it takes a great deal of effort to draw it out. Off you go.",
-  "The life of a wandering hero is filled with ups and downs. For every dragon-slaying adventure there is 'one small favour' drudging you across the known universe. I'm sure you understand.",
+  "The life of a wandering hero is filled with ups and downs. For every dragon-slaying adventure there is one small favour drudging you across the known universe. I'm sure you understand.",
   "I'm not giving out free money. But I'd be happy to send you on a little errand. I find it keeps adventurers out of trouble.",
   "Should your next adventure involve robbing a bank, take my advice and be sure to disable the scrying orbs first. Lesson learned.",
   "Keep your foreign magicks out of my head! ...Oh. You pressed a button. That's fine then. Here's your task.",
@@ -1108,40 +1301,18 @@ function openModal(tier){
   const titles = {free:'Already an Adventurer!',supporter:'Become a Supporter',legend:'Become a Legend'};
   const descs  = {
     free:'You already have full access to everything on the site for free. Thanks for using it!',
-    supporter:"Your name goes on the Supporters Wall with a gold badge, and you're helping keep the site ad-free and online.",
-    legend:"Your name appears in purple on the Supporters Wall with a Legend badge, and we'll add you to the footer credits. You can also email us a task suggestion to consider for the next update."
+    supporter:"Head to Ko-fi and leave your in-game name in the message. We'll add you to the Supporters Wall within 24 hours with a gold badge.",
+    legend:"You'll get a purple Legend badge on the Supporters Wall. DM us on Ko-fi with your in-game name and any task suggestion you'd like considered for the next update."
   };
   document.getElementById('modalTitle').textContent = titles[tier];
   document.getElementById('modalHeading').textContent = titles[tier];
   document.getElementById('modalDesc').textContent = descs[tier];
-  document.getElementById('modalName').style.display = tier === 'free' ? 'none' : 'block';
-  document.getElementById('modalSubmit').textContent = tier === 'free' ? 'Got it ✓' : 'Claim Your Place ➜';
   document.getElementById('supporterModal').classList.add('open');
 }
 function closeModal(){
   document.getElementById('supporterModal').classList.remove('open');
-  document.getElementById('modalName').value = '';
 }
-function submitSupporter(){
-  if(currentModalTier === 'free'){ closeModal(); return; }
-  const name = document.getElementById('modalName').value.trim();
-  if(!name){ document.getElementById('modalName').style.outline='2px solid var(--red)'; return; }
-  document.getElementById('modalName').style.outline='';
-  // Demo: add name to wall
-  const wall = document.getElementById('wallNames');
-  // Remove empty state if present
-  const emptyMsg = document.getElementById('wallEmpty');
-  if(emptyMsg) emptyMsg.remove();
-  const cls = currentModalTier === 'legend' ? 'wall-name legend' : currentModalTier === 'vip' ? 'wall-name vip' : 'wall-name';
-  const badge = document.createElement('span');
-  badge.className = cls;
-  badge.textContent = name;
-  wall.appendChild(badge);
-  supporterCount++;
-  document.getElementById('statSupporters').textContent = supporterCount;
-  document.getElementById('modalSubmit').textContent = '✓ Added to the Wall!';
-  setTimeout(closeModal, 1600);
-}
+
 // Close modal on overlay click
 document.getElementById('supporterModal').addEventListener('click', function(e){
   if(e.target === this) closeModal();
@@ -1190,14 +1361,44 @@ function rollActivity(){
   const el=document.getElementById('womQuote');
   el.style.opacity='0';
   setTimeout(()=>{el.textContent=WOM_QUOTES[womQuoteIdx];el.style.opacity='1';},150);
-  const pool=ACTIVITIES.filter(a=>{
+
+  let pool=ACTIVITIES.filter(a=>{
     if(difficulty!=='all'&&a.diff!==difficulty)return false;
     if(a.filters.some(f=>!filters[f]))return false;
-    return filters[a.cat];
+    if(!filters[a.cat])return false;
+    if(hideDone&&doneTasks.includes(a.title))return false;
+    return true;
   });
-  if(!pool.length){showResult({title:"Nothing to send you on.",desc:"I'd give you a task but you've turned everything off. Enable some filters and try again. Honestly.",tip:"",cat:"challenge",diff:"easy",guide:[]});return;}
+
+  // If hideDone emptied the pool, fall back gracefully to full pool
+  if(!pool.length&&hideDone){
+    pool=ACTIVITIES.filter(a=>{
+      if(difficulty!=='all'&&a.diff!==difficulty)return false;
+      if(a.filters.some(f=>!filters[f]))return false;
+      return filters[a.cat];
+    });
+  }
+
+  if(!pool.length){
+    showResult({title:"Nothing to send you on.",desc:"I'd give you a task but you've turned everything off. Enable some filters and try again. Honestly.",tip:"",cat:"challenge",diff:"easy",guide:[]});
+    return;
+  }
+
   const pick=pool[Math.floor(Math.random()*pool.length)];
   currentActivity=pick; showResult(pick); addHistory(pick.title);
+
+  // Sync done button state
+  const doneBtn=document.getElementById('doneBtn');
+  const card=document.getElementById('resultCard');
+  if(doneTasks.includes(pick.title)){
+    doneBtn.className='done-btn isdone';
+    doneBtn.innerHTML='&#10003; Done';
+    card.classList.add('task-done');
+  }else{
+    doneBtn.className='done-btn undone';
+    doneBtn.innerHTML='&#10003; Mark Done';
+    card.classList.remove('task-done');
+  }
 }
 function showResult(act){
   document.getElementById('resultEmpty').style.display='none';
@@ -1213,6 +1414,7 @@ function showResult(act){
   const tipEl=document.getElementById('resultTip');
   if(act.tip){tipEl.textContent='Tip: '+act.tip;tipEl.style.display='block';}else{tipEl.style.display='none';}
   document.getElementById('hintRow').style.display=(act.guide&&act.guide.length)?'flex':'none';
+  document.getElementById('doneRow').style.display='flex';
   const card=document.getElementById('resultCard');
   card.classList.remove('reveal'); void card.offsetWidth; card.classList.add('reveal');
 }
@@ -1328,11 +1530,43 @@ function restoreA11y(){
 }
 restoreA11y();
 buildFilters(); setDiff('all'); loadTrivia();
+// ==================== DAILY CHALLENGES ====================
+const DAILY_CHALLENGES = [
+  {title:"Kill Bryophyta Without Food",req:"Req: Any combat level with a Mossy Key",desc:"Fight the Moss Giant boss in Varrock Sewers without eating a single piece of food. Kite her with Ranged or Magic and rely on prayer instead of your inventory.",tip:"She only uses melee so stay out of melee range and poke from a distance. If your HP drops, prayer-flick rather than eating.",cat:"combat",diff:"medium",guide:["Get a <b>Mossy Key</b> from any Moss Giant kill (roughly 1 in 118 drop rate).","Head to <b>Varrock Sewers</b> and use the key on the mossy rock to enter the lair.","Do NOT eat any food during the fight. Kite or prayer-flick if health gets low.","She uses magic and melee. Protect from Magic or keep your distance throughout.","Kill her, grab the drops, and walk out with your dignity intact."],note:"Bryophyta hits up to 10 per attack. This is very manageable if you stay ranged or mage her from outside melee range. The challenge is self-discipline, not difficulty."},
+  {title:"Complete Jad Without a Teleport in Your Inventory",req:"Req: Access to TzHaar Fight Cave, 80+ Ranged or Mage recommended",desc:"The Fight Cave is tough enough. Now do it knowing there's no escape hatch. Leave every teleport tab, rune, and jewellery piece at the bank before you enter.",tip:"Removing the safety net often makes you calmer. You stop thinking about quitting and just focus on the fight.",cat:"combat",diff:"hard",guide:["Empty your inventory of all teleport runes, tabs, and jewellery with teleport charges before entering.","Enter the <b>TzHaar Fight Cave</b> in Mor Ul Rek beneath the TzHaar city on Karamja.","Survive all 62 waves. When you reach Jad, pray-flip between Protect from Missiles and Protect from Magic as his attack animation changes.","Kill the healers the moment they spawn or lure Jad so they heal into your attacks instead.","No safety net. Win it clean."],note:"Recommended: 80+ ranged, rigour or eagle eye prayer, full prayer restore potions. The mental game here is the whole challenge."},
+  {title:"Kill 50 Dagannoth Kings in One Trip",req:"Req: 70+ combat stats, Waterbirth Island access, multiple combat styles",desc:"The Dagannoth Kings are a trio of bosses each vulnerable only to one combat style. Bring supplies for all three and see how long you can last without leaving.",tip:"Bring a blowpipe for Rex, a whip for Supreme, and a trident or staff for Prime. Protect from the one that's currently aggro on you.",cat:"combat",diff:"hard",guide:["Travel to <b>Waterbirth Island</b> via charter ship from Rellekka or fairy ring code <b>AIP</b>.","Descend through the dungeon. Solo entry requires throwing a rock at each door to hold it open.","Kill <b>Dagannoth Rex</b> with magic, <b>Dagannoth Supreme</b> with ranged, <b>Dagannoth Prime</b> with melee.","Collect every bone drop. Dragon bones from all three sell well.","Track your count. Hit 50 total across all three kings in one uninterrupted trip."],note:"Each king only takes damage from one combat style. Attacking Rex with melee barely scratches him. Knowing the prayer and style to use matters more than raw stats."},
+  {title:"Kill Obor Without Protect From Melee",req:"Req: 60+ Defence, a Giant Key from a Hill Giant kill",desc:"Obor the Hill Giant boss is very manageable with prayer. Without it you're eating every hit. Fight him raw.",tip:"Obor's max hit is 26. Bring a full inventory of sharks or better. Doable at 60+ Defence.",cat:"combat",diff:"medium",guide:["Get a <b>Giant Key</b> from a Hill Giant kill in Edgeville Dungeon or Stronghold of Security.","Find the <b>Obor's lair</b> door in the Edgeville Dungeon near the ladder.","Enter. <b>Do not activate Protect from Melee</b> at any point during the fight.","Keep eating above 50% HP. He hits consistently and has 350 HP.","Kill him and collect his drops, including the Giant's Club if you're lucky."],note:"Obor uses only melee. At 60+ Defence with good food this is very doable. At 40 Defence it gets hairy. The challenge is proving you can take a beating."},
+  {title:"Complete a Hard Clue Scroll Start to Finish",req:"Req: Varies — check individual clue steps. Broad skill base recommended.",desc:"Hard clues are long, multi-step treasure hunts across the whole map. Today you start one and finish it without quitting halfway through.",tip:"The OSRS wiki Treasure Trails page has solutions for every hard clue step. Keep it open the whole time.",cat:"challenge",diff:"medium",guide:["Get a Hard Clue Scroll from: hellhounds, saradomin wizards, fire giants, or level 3 clue boxes.","Follow each step. Hard clues average 5-7 steps involving coordinates, ciphers, and emote challenges.","Use the <b>OSRS wiki Treasure Trails guide</b> to decode cipher clues and find coordinate dig spots.","Some steps require fighting a double agent. Bring combat gear for those steps.","Dig at the final X, open the casket, and see what you got."],note:"Hard clue rewards include god d'hide sets, ranger boots (rare jackpot), and various high-value cosmetics. Average value is around 200k but the range is huge."},
+  {title:"Earn 1000 XP in 5 Skills You Never Train",req:"Req: None — open to all levels",desc:"Open your Skills tab, find 5 skills that barely move, and earn at least 1000 XP in each before the day ends.",tip:"Firemaking: burn 15 logs. Cooking: cook 10 pieces of food. Crafting: string flax or cut gems. All fast.",cat:"skilling",diff:"easy",guide:["Open your <b>Skills tab</b> and identify the 5 skills with the lowest levels or least recent XP.","For each, look up the fastest method on the OSRS wiki.","1000 XP at level 1 takes you to roughly level 9. At level 30 it's a few hundred actions. It's achievable fast.","Complete all 5 before the day ends.","Optionally post your before and after screenshot to r/2007scape."],note:"This challenge is about breadth, not depth. Forcing yourself into neglected skills often reveals training methods you'll actually stick with."},
+  {title:"Complete a Full Farming Run With Ultracompost on Every Patch",req:"Req: 9+ Farming, access to at least 2 herb patches",desc:"Do a farming run hitting every herb patch you can access with ultracompost applied to every single one before planting. No shortcuts.",tip:"Ultracompost drops your herb death rate to under 4%. Over dozens of runs the GP difference is enormous.",cat:"skilling",diff:"easy",guide:["Buy or make <b>Ultracompost</b> — one per patch. It's on the GE.","Plan your route: <b>Ardougne, Falador, Catherby, Camelot, Morytania</b> patches and more if unlocked.","Apply ultracompost first, then plant the herb seed.","Wait 80 minutes and return to harvest.","Compare your yield to previous runs without ultracompost."],note:"Ranarr seeds with ultracompost yield 6-8 herbs versus 4-5 without. Over 50 runs that's hundreds of extra herbs and hundreds of thousands of extra GP."},
+  {title:"Power-Mine One Full Hour at the Motherlode Mine",req:"Req: 30+ Mining. Upper level requires 72 Mining.",desc:"Spend a solid 60 minutes in the Motherlode Mine mining paydirt and cleaning nuggets. Track your golden nugget count toward the Prospector's Kit.",tip:"The upper level at 72+ Mining has faster paydirt rates and less competition.",cat:"skilling",diff:"medium",guide:["Enter the <b>Motherlode Mine</b> in the Dwarven Mine under Ice Mountain.","Mine paydirt veins until your inventory is full, then deposit into the hopper.","Clean the sack on the lower level to collect ores and <b>golden nuggets</b>.","The <b>Prospector's Kit</b> costs 180 total nuggets and gives 2.5% bonus Mining XP when worn.","Run for a full 60 minutes and count your nugget gains."],note:"At 70 Mining you get roughly 25-35 nuggets per hour on the lower level. Full Prospector's Kit takes around 5-7 hours total to unlock. Worth the investment."},
+  {title:"Beat Your Agility Lap Record in One Hour",req:"Req: Varies by course. Gnome (1+), Barbarian (35+), Seers (60+), Rellekka (80+), Ardougne (90+).",desc:"Pick the highest Agility course you qualify for, run it for exactly 60 minutes, and beat whatever you've done before in one session.",tip:"Put on a podcast. Agility is intentional repetition. Consistency beats stopping to check your phone.",cat:"skilling",diff:"medium",guide:["Note your current Agility level and pick the highest available course.","Start a <b>60-minute timer</b> and run laps without stopping.","Count every lap you complete before the timer ends.","Write the number down. That's your record to beat next time.","The Ardougne course at 90+ gives over 60,000 XP/hr — the best available."],note:"The mental challenge here is monotony. Agility is the game's most repetitive skill by design. Finding your focus through it builds the same patience that endgame OSRS demands."},
+  {title:"Fletch 500 Adamant Arrows in One Sitting",req:"Req: 65 Fletching",desc:"Buy the materials, sit at a bank, and fletch 500 adamant arrows without getting up. No distractions. Just you, your knife, and 500 arrowheads.",tip:"Each full inventory of headless arrows and arrowheads takes under 30 seconds. This is pure AFK discipline.",cat:"skilling",diff:"easy",guide:["You need <b>65 Fletching</b>. Buy <b>500 adamant arrowheads</b> and <b>500 headless arrows</b> from the GE.","Sit at any bank and withdraw inventories of each.","Use the arrowheads on the headless arrows to fletch.","Keep going until all 500 are done. You'll earn around 25,000 Fletching XP.","Sell the finished arrows on the GE or keep them for ranged training."],note:"Adamant arrows sell well and this is one of the most AFK Fletching methods. If you want to go further, scale up to 1,000 or 2,500."},
+  {title:"Complete 5 Hallowed Sepulchre Floors Back to Back",req:"Req: 52+ Agility, Sins of the Father quest completed, access to Darkmeyer",desc:"The Hallowed Sepulchre is the most mechanically demanding agility activity in OSRS. Complete 5 consecutive floors without dying.",tip:"Floor 3 is where most first deaths happen. The blade obstacles need precise timing. Watch a guide for floor 3 and 4 specifically.",cat:"skilling",diff:"hard",guide:["Requirements: <b>52+ Agility and Sins of the Father quest</b>. Access via Darkmeyer in Morytania.","Enter the Sepulchre and navigate parkour on each floor. Blades, dart traps, and moving platforms all need to be timed.","Each floor ends with a coffin containing <b>Hallowed Marks</b>.","Complete all 5 floors without dying. A single death resets your run.","Spend marks on the Hallowed Ring and other exclusive rewards."],note:"The Sepulchre beats every standard Agility course for XP above level 72. Deaths don't cost you Agility XP but they do reset your mark collection run."},
+  {title:"Visit 10 Fairy Ring Codes You've Never Used",req:"Req: Started Fairy Tale Part II, access to any fairy ring",desc:"The fairy ring network has 47 destinations across Gielinor. Today you travel to 10 you've never visited and note what you found at each one.",tip:"Several fairy ring destinations unlock genuinely useful shortcuts you'll use regularly from now on.",cat:"challenge",diff:"easy",guide:["Access any fairy ring network point (requires Fairy Tale II started).","Look up the <b>complete fairy ring code list</b> on the OSRS wiki. There are 47 destinations.","Pick 10 codes you've never used and type each into the ring.","Spend 2 minutes at each destination exploring what's nearby.","Note down any that are practically useful for your regular activities."],note:"Highlights: CKR takes you near the nature altar on Karamja. AJR puts you right by Rellekka. BIR leads to Feldip Hills near chompy birds. ALS is the Mud Plateau for Lava dragons."},
+  {title:"Complete the Varrock Hard Achievement Diary",req:"Req: 68 Mining, 60 Smithing, 66 Magic, 54 Agility, plus completed Varrock Medium",desc:"The Varrock Hard Diary unlocks Varrock Armour 3 which gives a 10% chance of smelting double bars at any furnace in the game.",tip:"The hardest requirement is 66 Magic for teleporting to the GE square and 54 Agility for the Edgeville Dungeon shortcut.",cat:"challenge",diff:"hard",guide:["Open the <b>Achievement Diary</b> tab and select Varrock Hard.","Check each task and confirm your skill levels meet the requirements.","Key tasks: <b>smith a rune item at Varrock West anvils</b>, <b>use the Edgeville Dungeon shortcut</b>, pickpocket a Master Farmer.","Complete tasks methodically over one session around Varrock.","Claim <b>Varrock Armour 3</b> from Toby in Varrock to finish."],note:"Varrock Armour 3 is a passive upgrade that pays for itself within a few thousand bars smelted. One of the better diary rewards for anyone who trains Smithing seriously."},
+  {title:"Complete One Elite Clue Scroll",req:"Req: Varies. Typically 80+ combat, multiple high skills for emote requirements",desc:"Elite clues are the hardest Treasure Trail tier. They involve combat, coordinate digging, scan steps across large zones, and brutal emote requirements.",tip:"Have the OSRS wiki open. Elite clues reference obscure NPCs and places you may have never visited.",cat:"challenge",diff:"hard",guide:["Get an Elite Clue from: Cerberus, Zulrah, Kalphite Queen, Alchemical Hydra, or pickpocketing elves.","Open the clue. Elite clues average 5-7 steps. Each is more complex than a hard clue step.","Some steps require killing a <b>double agent</b> NPC after performing an emote. Bring combat gear.","Scan clues cover a large area. Use the wiki's coordinate tool to narrow down dig spots.","Open the elite casket. Realistic chance at 3rd age gear, gilded armour, or other high-value drops."],note:"Average elite clue value is around 200-500k but the range is enormous. Ranger boots alone are worth 35m+. Every elite casket is genuinely exciting to open."},
+  {title:"Kill 25 Abyssal Demons, Pick Up Every Drop",req:"Req: 85 Slayer, Slayer task assigned by a Slayer master",desc:"Kill 25 Abyssal Demons on an assigned Slayer task and pick up absolutely every single drop that lands. Nothing left on the ground.",tip:"Use a looting bag if you have one. You'll fill your inventory quickly. Sort your inventory before starting.",cat:"combat",diff:"medium",guide:["Get <b>Abyssal Demons</b> assigned by Duradel or Nieve (requires 85 Slayer, 100 or 120 combat respectively).","Head to the Slayer Tower in Morytania or Catacombs of Kourend.","Kill 25 demons and pick up <b>every single drop</b> — ashes, runes, shards, all of it.","Bank between kills if your inventory fills. The rule is nothing stays on the floor.","If an Abyssal Whip or Dagger drops, that counts double as a victory."],note:"The challenge is discipline. Abyssal Demons drop ensouled heads, runes, and coins on nearly every kill. Picking up everything means frequent banking trips. Worth it once you start tracking the total."},
+  {title:"Do a Full Birdhouse Run Then Immediately a Tree Run",req:"Req: Fossil Island access (Bone Voyage), 5+ Hunter, 5+ Crafting, 15+ Farming for trees",desc:"Stack the two most recommended passive activities back to back in one session. Reset your birdhouses then complete a full tree run before they're ready.",tip:"You can do both in under 15 minutes. The community calls this the most efficient daily habit in OSRS.",cat:"skilling",diff:"easy",guide:["Travel to <b>Fossil Island</b> and collect existing birdhouses if ready. Place fresh birdhouses with seeds at all four spots.","Immediately start your <b>tree run route</b>: Lumbridge, Varrock, Falador, Taverley, Gnome Stronghold.","Check each tree patch. Fully grown trees should be cut down and replanted using Ultracompost.","Come back in 80 minutes to collect the birdhouse loot (seeds, nests, XP).","You've completed both passive routines in under 15 minutes of active play."],note:"Birdhouse runs take about 3-4 minutes per hour and give significant passive Hunter XP and nest drops. Tree runs give enormous Farming XP for minimal active time. The community recommends combining them every single session."},
+  {title:"Kill the Chaos Fanatic Without a Staff or Crossbow",req:"Req: Wilderness access, 60+ combat recommended. Bring only melee or a shortbow.",desc:"The Chaos Fanatic fires explosive orbs. Most players mage or crossbow him. Today you fight him with only melee or a shortbow.",tip:"He hits up to 20 with magic. Pray Magic and bring a decent melee weapon or a shortbow. The challenge is the rule.",cat:"combat",diff:"medium",guide:["The Chaos Fanatic is at level 38 Wilderness, west of the Lava Maze.","Bank your crossbow, staff, and all runes. Bring <b>melee or shortbow setup only</b>.","Activate Protect from Magic before engaging. He uses explosive magic attacks.","Kill him without using any ranged crossbow or magical staff attack.","Teleport out fast after the kill. This is the Wilderness."],note:"He drops ancient staves and Malediction shards occasionally. The Wilderness is risky here so only bring gear you can afford to lose."},
+  {title:"Obtain 3 New Collection Log Slots in One Day",req:"Req: Varies by target category. Beginner clues are most accessible.",desc:"Open your Collection Log and pick a category you haven't finished. Farm it until you've unlocked 3 new unique slots today.",tip:"Pick a category with achievable drops rather than chasing ultra-rares. Beginner clues, Bryophyta, or Mimic kills are fast to farm.",cat:"challenge",diff:"medium",guide:["Open your <b>Collection Log</b> via the Adventure Log interface.","Browse categories and find one where you're close to completing several slots.","Good targets: Beginner Clue Scrolls (16 unique slots, fast), Obor drops, Bryophyta drops.","Farm your chosen source until 3 new slots are ticked off.","Screenshot before and after."],note:"The collection log has 1,904 total slots. Even 3 per day compounds into thousands of hours of structured gameplay. The habit is the whole point."},
+  {title:"Complete the Fremennik Medium Achievement Diary",req:"Req: Fremennik Trials quest, 40-50 in several skills, Waterbirth Island access",desc:"The Fremennik Medium Diary rewards Sea Boots 2 with free daily Waterbirth Island teleports — great for Rock Crabs or Dagannoth access.",tip:"Most tasks are in and around Rellekka. One trip to the area handles most of the diary.",cat:"challenge",diff:"medium",guide:["Requirements: Complete <b>The Fremennik Trials</b> quest, 40-50 in combat and gathering skills.","Open <b>Achievement Diary > Fremennik Medium</b> and check each task.","Notable tasks: kill a Rock Crab, enter the Waterbirth dungeon, catch a swordfish, smith a Helm of Neitiznot.","Most tasks can be completed in a single trip around Rellekka and Waterbirth.","Claim your <b>Fremennik Sea Boots 2</b> from Thorvald the Warrior in Rellekka."],note:"Waterbirth teleports from the boots are genuinely useful if you farm Rock Crabs or plan to do Dagannoth Kings. A modest reward for a modest diary."},
+  {title:"Win a Round of TzHaar Fight Pit",req:"Req: Any combat level. Needs at least one other player in the arena.",desc:"The Fight Pit is a free-for-all PvP arena in the TzHaar city. Win a round — be the last player standing.",tip:"Fight Pit is quiet. Try world 2 at the TzHaar city. Bring your best combat gear.",cat:"minigame",diff:"medium",guide:["Travel to the <b>TzHaar city</b> on Karamja (volcano entrance or STASH unit access).","Locate the <b>Fight Pit</b> arena and enter.","Wait for at least one other player. World 2 TzHaar area sometimes has a few people.","When the round starts, fight everyone until you're the last one alive.","Collect your Tokkul reward from the chest."],note:"The Fight Pit is one of the oldest PvP activities in OSRS and barely anyone uses it anymore. Winning one is genuinely unusual. No restrictions on gear or prayer."},
+  {title:"Kill Artio Without Bringing a Special Attack Weapon",req:"Req: 80+ combat recommended. Artio is inside the Weiss Dungeon, no Wilderness required.",desc:"Artio is the non-Wilderness version of Callisto. Most players bring a spec weapon to speed up kills. Today you use standard attacks only.",tip:"Artio hits hard with both melee and magic. Protect from Magic and stay on your food. The kill will take longer — that's the point.",cat:"combat",diff:"hard",guide:["Artio is accessed via the <b>Weiss Dungeon</b>, not deep Wilderness — much safer than Callisto.","Bank your special attack weapon entirely. Bring only your regular melee setup and food.","Activate Protect from Magic. Artio uses both magic and melee attacks.","Kill the boss using only standard attacks. Expect the kill to take noticeably longer than usual.","Collect drops — dragon pickaxe, claws, and zenyte shards are all possible."],note:"Artio was added alongside Spindel and Vet'ion Prime as wilderness-free alternatives. Same drops as the original Wilderness versions, significantly lower PKer risk."},
+  {title:"Get a Medium Clue Scroll by Pickpocketing",req:"Req: 38 Thieving for Master Farmers, 15 Thieving for HAM members",desc:"Train Thieving until a medium clue drops into your hands. No killing monsters for it — only pickpocketing counts.",tip:"Master Farmers near Draynor Village have a decent medium clue drop rate and also drop valuable herb seeds.",cat:"skilling",diff:"easy",guide:["Head to the <b>Master Farmer</b> just north of Draynor Village. Requires 38 Thieving.","Alternatively, pickpocket <b>HAM Members</b> in the Lumbridge cellar at 15+ Thieving.","Keep pickpocketing until a <b>medium clue scroll</b> drops into your inventory.","Once you have it, follow the clue steps. Medium clues have 3-5 steps.","Finish the clue and open the casket."],note:"Master Farmers also drop ranarr, snapdragon, and torstol seeds as a side bonus. Getting the clue through Thieving makes it feel earned twice over."},
+  {title:"Earn 500,000 GP From One Monster Type",req:"Req: Varies by monster. Blue Dragons recommend 70+ combat and anti-dragonfire protection.",desc:"Pick one monster and grind it until you've made 500,000 GP from their drops alone. No switching targets.",tip:"Blue Dragons in Taverley Dungeon are worth 3,000-4,000 GP per kill. You need roughly 130-165 kills.",cat:"combat",diff:"medium",guide:["Pick your target. Good options: <b>Blue Dragons</b> (Taverley Dungeon), <b>Lesser Demons</b> (Karamja Dungeon), or <b>Hill Giants</b> (Edgeville Dungeon).","Check current GE prices on the OSRS wiki before starting to know your expected GP per kill.","Bring food, gear appropriate for the monster, and commitment.","Kill only that monster until your loot is worth 500,000 GP. Bank regularly.","Sell everything at the GE and count the final total."],note:"Blue Dragons drop noted hides via the resource room shortcut (requires 70 Agility). Each kill yields around 3-4k GP. At that rate 130-165 kills gets you there."},
+];
 
-// ==================== DAILY CHALLENGE ====================
+function getDailyActivity(){
+  const key  = getDailyKey();
+  const seed = dateToSeed(key);
+  const rng  = seedRng(seed);
+  const idx  = Math.floor(rng() * DAILY_CHALLENGES.length);
+  return DAILY_CHALLENGES[idx];
+}
 
-const DAILY_WOM_INTROS = [
-  "Right then. I've been thinking about what to send you on today. Don't dawdle.",
+const DAILY_WOM_INTROS=[
+  "Greetings. I'm sure I can think of a few little jobs. This won't be a quest, mind you. Just a little favour.",
   "Every day I pick one task. Today's is yours. Try not to make a mess of it.",
   "I've had rather a lot of time to think since settling here. Today I thought of this.",
   "The same task, for every adventurer, every day. There's a poetry to that I rather enjoy.",
@@ -1342,167 +1576,86 @@ const DAILY_WOM_INTROS = [
   "I've been watching the sunrise over Draynor thinking about today's challenge. This is what I came up with.",
 ];
 
-function getDailyKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function getDailyKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-
-function seedRng(seed) {
-  // Simple seeded random — mulberry32
-  let s = seed;
-  return function() {
-    s += 0x6D2B79F5;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+function seedRng(seed){
+  let s=seed;
+  return function(){
+    s+=0x6D2B79F5;
+    let t=s;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return((t^(t>>>14))>>>0)/4294967296;
   };
 }
-
-function dateToSeed(dateStr) {
-  // Convert YYYY-MM-DD to a stable integer seed
-  return dateStr.split('-').reduce((acc, n, i) => acc + parseInt(n) * [100000, 100, 1][i], 0);
+function dateToSeed(dateStr){
+  return dateStr.split('-').reduce((acc,n,i)=>acc+parseInt(n)*[100000,100,1][i],0);
 }
 
-// ==================== DAILY CHALLENGES POOL ====================
-// Separate pool from the main activities — tougher, more specific, experience-focused.
-// Inspired by r/2007scape, the OSRS wiki, community challenge runs, and combat achievements.
-const DAILY_CHALLENGES = [
-  // --- COMBAT ---
-  {title:"Kill Bryophyta Without Food",desc:"Fight the Moss Giant boss in the Varrock Sewers using only your combat stats and prayer. No eating. Safespot her if you need to, but not a single bite of food allowed.",tip:"She only does melee so stand out of range and poke with Ranged or Magic. The challenge is the rule, not the difficulty.",cat:"combat",diff:"medium",guide:["Get a <b>Mossy Key</b> from any Moss Giant kill (roughly 1 in 118 drop rate).","Head to <b>Varrock Sewers</b> and use the key on the mossy rock to enter Bryophyta's lair.","Do NOT eat any food during the fight. If she gets you low, kite and prayer-flick rather than eating.","She attacks with magic and melee — Protect from Magic or keep your distance.","Kill her and collect the drops. Report back to the WOM with your pride intact."],note:"Bryophyta has 8 attack phases of 3 hits each. Her max hit is around 10 on a mid-level account. This is very doable without food if you use range or mage from distance."},
+function loadDailyChallenge(){
+  const key=getDailyKey();
+  const act=getDailyActivity();
+  const introIdx=dateToSeed(key)%DAILY_WOM_INTROS.length;
+  const now=new Date();
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dateStr=dayNames[now.getDay()]+', '+now.getDate()+' '+monthNames[now.getMonth()];
+  document.getElementById('dailyDateLabel').textContent=dateStr;
+  document.getElementById('dailyWomIntro').textContent=DAILY_WOM_INTROS[introIdx];
 
-  {title:"Complete Jad Without a Teleport in Your Inventory",desc:"The Fight Cave is tough enough. Now do it knowing there's no escape hatch if things go wrong. Leave every teleport tab at the bank before you enter.",tip:"This is a mental challenge as much as a skill one. You already know how to do Jad. Trust yourself.",cat:"combat",diff:"hard",guide:["Empty your inventory of all teleport runes, tabs, and jewellery with teleport charges.","Enter TzHaar Fight Cave in Mor Ul Rek (beneath the TzHaar city accessible from Karamja).","Survive all 62 waves to reach TzHaar-Ket-Jad. Prayer-flip between protect from mage and protect from ranged when he attacks.","Kill the healers immediately when they appear or lure Jad so they heal into your attacks.","No safety net. Win or walk back from the cave entrance with your head down."],note:"Ironically removing the teleport often makes you calmer. You stop thinking about quitting and just focus. Recommended stats: 70+ prayer, 80+ ranged or mage."},
+  // Show requirement bar
+  const reqEl=document.getElementById('dailyReq');
+  if(act.req){reqEl.textContent=act.req;reqEl.style.display='inline-block';}
+  else{reqEl.style.display='none';}
 
-  {title:"Kill 50 Dagannoth Kings in One Trip",desc:"The Dagannoth Kings in Waterbirth Island dungeon are a trio of bosses that each require a different combat style. Bring supplies for all three and see how long you can last in a single trip.",tip:"Bring a blowpipe or crossbow for Rex, a whip for Supreme, and your best mage gear for Prime. Don't bring more food than you can carry.",cat:"combat",diff:"hard",guide:["Travel to <b>Waterbirth Island</b> (charter ship from Rellekka or fairy ring code <b>AIP</b>).","Descend through the dungeon using pets or a partner to hold the doors. Solo entry requires a rock (throw it to hold doors open).","Set up at the DKS lair. Kill <b>Rex</b> with magic from across the bridge, <b>Supreme</b> with ranged, <b>Prime</b> with melee.","Collect every bone drop. Dragon bones from all three kings are worth banking.","Track your kill count. Hit 50 total across all three kings in one uninterrupted trip."],note:"Each king only takes damage from one combat style. If you attack Rex with melee it barely hurts him. Knowing which prayer to use for which king matters more than high stats."},
+  const catClass='badge-'+act.cat;
+  const diffBadge='badge-'+act.diff;
+  const diffLabel=act.diff.charAt(0).toUpperCase()+act.diff.slice(1);
+  document.getElementById('dailyMeta').innerHTML=
+    '<span class="rs-badge '+catClass+'">'+act.cat.toUpperCase()+'</span>'+
+    '<span class="rs-badge '+diffBadge+' diff-badge">'+diffLabel+'</span>';
+  document.getElementById('dailyTitle').textContent=act.title;
+  document.getElementById('dailyDesc').textContent=act.desc;
+  const tipEl=document.getElementById('dailyTip');
+  if(act.tip){tipEl.textContent='Tip: '+act.tip;tipEl.style.display='block';}
+  else{tipEl.style.display='none';}
 
-  {title:"Kill Obor Without Protect From Melee",desc:"Obor the Hill Giant boss is manageable with protection prayer. Without it, you're tanking every hit. Fight him raw on your own terms.",tip:"Obor's max hit is 26. Bring a full inventory of sharks or better. This is doable at 60+ defence.",cat:"combat",diff:"medium",guide:["Get a <b>Giant Key</b> from a Hill Giant kill (Edgeville Dungeon or Stronghold of Security).","Find the <b>Obor's lair</b> door in the Edgeville Dungeon H.A.M. members room area.","Enter the lair. <b>Do not activate Protect from Melee</b> for the entire fight.","Obor hits up to 26. Keep eating to stay above half health. He's aggressive and attacks every few ticks.","Kill him and collect the Giant's Club or other drops."],note:"Obor has 350 HP and uses melee exclusively. Without prayer you will take a beating. Recommended: 60+ defence, full inventory of food. The bragging rights are real."},
-
-  {title:"Complete a Hard Clue Scroll Start to Finish",desc:"Hard clues are long, painful, and occasionally require going to multiple continents. Today you start one and finish it, no giving up halfway.",tip:"The OSRS wiki Treasure Trails page has solutions for every single hard clue step. Keep it open in another tab.",cat:"challenge",diff:"medium",guide:["Get a Hard Clue Scroll from a monster that drops them: hellhounds, saradomin wizards, armadyl/bandos mages, or fire giants.","Open the clue and start following its instructions. Hard clues have around 5-7 steps.","Use the <b>OSRS wiki Treasure Trails/Hard page</b> to decode cipher clues, locate NPC coordinates, and figure out emote requirements.","STASH units at specific locations hold the emote equipment you need. If yours are empty, buy the items from the GE.","Dig at the final X and open the casket."],note:"Hard clue rewards include god-d'hide sets, ranger boots (rare jackpot), robin hood hat, and various high-value cosmetics. A single hard clue can pay out over 100m on a lucky roll."},
-
-  // --- SKILLING ---
-  {title:"Get 1000 Total XP Across 5 Different Skills Today",desc:"Pick 5 skills you don't normally train and earn at least 1000 XP in each before the day ends. No repeating skills from last time you did this.",tip:"Use skills that have fast early XP actions. Firemaking logs, cooking food, crafting jewellery, fletching arrows.",cat:"skilling",diff:"easy",guide:["Open your <b>Skills tab</b> and identify 5 skills you genuinely neglect.","For each skill, find the fastest method to earn 1000 XP from your current level. The OSRS wiki training page per skill is your guide.","Firemaking: burn about 15 normal logs. Cooking: cook 10-15 pieces of food. Crafting: string some flax or cut a few gems.","Track your progress. 1000 XP per skill is modest but forces you to engage with content you ignore.","Finish all 5 before midnight and tell someone."],note:"1000 XP sounds like nothing but at level 1 it takes you to level 9. At level 30 it's still a few hundred actions. It's about breadth, not depth."},
-
-  {title:"Complete a Full Farming Run With Ultracompost on Every Patch",desc:"Do a farming run hitting every patch available to you, with ultracompost applied to every single one before planting. No skipping, no cutting corners.",tip:"Ultracompost is the difference between a 10% death chance and under 4%. It pays for itself in saved seeds within two runs.",cat:"skilling",diff:"easy",guide:["Buy or make <b>Ultracompost</b>. You need one per patch. Buy volcanic ash from the GE and add to supercompost, or just buy ultracompost directly.","List every herb patch you can access: <b>Ardougne, Falador, Catherby, Camelot, Morytania</b> and more with higher levels.","Teleport to each one, apply ultracompost, then plant your chosen herb seed.","Wait 80 minutes. Come back and harvest.","Count your yield and compare it to previous runs without ultracompost."],note:"Ranarr seeds typically yield 6-8 herbs with ultracompost at 80+ Farming versus 4-5 without. Over dozens of runs the difference becomes thousands of extra herbs."},
-
-  {title:"Power-Mine a Full Hour at the Motherlode Mine",desc:"Spend a full 60 minutes mining paydirt at the Motherlode Mine without banking. Clean the sack, collect your ores and nuggets, and see how many gold nuggets you accumulate toward unlocking the prospector outfit.",tip:"The upper level of Motherlode Mine requires 72 Mining and gives faster paydirt rates. Worth unlocking if you haven't.",cat:"skilling",diff:"medium",guide:["Head to the <b>Motherlode Mine</b> in the Dwarven Mine, accessible via the Dwarven Mine entrance near Ice Mountain.","Mine <b>paydirt veins</b> until your inventory is full, then deposit into the hopper above.","Clean the sack on the lower level to collect your ore and golden nuggets.","Spend nuggets on the Prospector's Kit (full set costs 180 nuggets) for a 2.5% Mining XP boost.","Keep going for a full hour and track your nugget accumulation."],note:"At 70 Mining you get roughly 25-35 nuggets per hour on the lower level. The golden nuggets are the real daily goal since the Prospector's Kit is one of the best passive bonuses in the game."},
-
-  {title:"Achieve Your Highest Ever Agility Lap Count in One Session",desc:"Pick the highest Agility course you can use, set a one-hour timer, and beat your previous personal best for consecutive laps without stopping.",tip:"The Seers Village course at 60+ Agility gives over 50k XP/hr. Ardougne at 90+ is the best in the game. Challenge yourself on the best course available to you.",cat:"skilling",diff:"medium",guide:["Open your skills tab and note your current Agility level.","Pick the highest course available: Gnome (1+), Barbarian (35+), Seers Village (60+), Rellekka (80+), Ardougne (90+).","Start a <b>60-minute timer</b> and run laps continuously. No breaks, no banking, no chatting.","Count your total laps when the timer ends. Write the number down.","The goal is purely to beat whatever you've done before in one sitting."],note:"The mental challenge here is the monotony. Agility courses are intentionally repetitive. Put on a podcast, stay consistent, and just run. Your level will tick up faster than you expect."},
-
-  {title:"Fletch 500 Adamant Arrows in One Sitting",desc:"A solid mid-game Fletching task. Buy the materials, sit at a bank, and fletch 500 adamant arrows. No teleporting around, no distractions. Just you and your knife.",tip:"Each inventory of headless arrows + arrow shafts takes seconds. You can do this while watching something.",cat:"skilling",diff:"easy",guide:["You need <b>65 Fletching</b> to fletch adamant arrows.","Buy <b>500 adamant arrowheads</b> and <b>500 headless arrows</b> from the Grand Exchange.","Sit at any bank, withdraw an inventory of each, and use the arrowheads on the headless arrows.","Keep going until all 500 are done. Each set of 500 gives around 25,000 Fletching XP.","Sell the finished arrows or stash them for your own ranged training."],note:"Adamant arrows sell reasonably well and this is one of the most AFK Fletching methods available. If you want to go further, keep going to 1000 or more."},
-
-  {title:"Run 5 Consecutive Sepulchre Floors at the Hallowed Sepulchre",desc:"The Hallowed Sepulchre in Darkmeyer is one of the most mechanically demanding Agility activities in the game. Complete 5 floors back to back without dying.",tip:"Floor 1-2 are safe to learn on. Floor 3 introduces the blade obstacles. Floor 4 and 5 are where most deaths happen.",cat:"skilling",diff:"hard",guide:["Requirements: <b>52+ Agility and completion of Sins of the Father quest</b>. Access Darkmeyer through Morytania.","Enter the Sepulchre and run the parkour obstacles on each floor. Avoid the blades, dart traps, and moving platforms.","Each floor has a coffin at the end containing <b>Hallowed Marks</b> for rewards.","Complete <b>5 floors consecutively</b> without dying. Each death resets your run.","Spend hallowed marks on the Hallowed ring and other Sepulchre-exclusive items."],note:"The Sepulchre gives better Agility XP than any standard course above level 72. It also gives hallowed marks for unique cosmetics. Deaths reset your collection but not your Agility XP."},
-
-  // --- QUESTS / EXPLORATION ---
-  {title:"Visit 10 Fairy Ring Codes You've Never Used Before",desc:"The fairy ring network spans the entire world. Today you travel to 10 destinations you've never actually been to and take a screenshot or note what you found there.",tip:"Some fairy rings lead to genuinely useful shortcuts or rare content you'd otherwise never stumble on.",cat:"challenge",diff:"easy",guide:["Access the fairy ring network from any fairy ring (requires completion of <b>Fairy Tale II or started Part II</b>).","Look up the <b>full OSRS fairy ring code list</b> on the wiki. There are 47 destinations.","Write down 10 codes you've never used. Type each one into the ring and see where it takes you.","Explore for a couple of minutes at each destination. Check the wiki for what content is nearby.","Note down your favourites. Several fairy rings unlock practical shortcuts you'll use regularly from now on."],note:"Some highlights: CKR takes you to south Karamja near the nature altar. BIR takes you to the Feldip Hills. ALS leads to the Mud Plateau. AJR is right beside Rellekka — great for Rock Crabs."},
-
-  {title:"Complete the Varrock Hard Achievement Diary",desc:"The Varrock Hard Diary requires 68 Mining, 60 Smithing, 66 Magic, 54 Agility, and other skills. It unlocks the Varrock Armour 3 which gives a 10% chance of smelting double bars at any furnace.",tip:"The hardest task in this tier is probably the Agility shortcut in Edgeville Dungeon. Make sure you have 54 Agility before attempting.",cat:"challenge",diff:"hard",guide:["Open your <b>Achievement Diary</b> interface and select Varrock Hard.","Check each task and note which requirements you don't meet. Work on skill levels first.","Key tasks include: <b>smith a rune item at Varrock West</b>, <b>teleport to Varrock GE square</b>, <b>use the Edgeville Dungeon shortcut</b>, and pickpocketing a master farmer near Draynor.","Work through each task methodically. Most can be done in a single Varrock visit.","Claim Varrock Armour 3 from <b>Toby</b> in Varrock to finish."],note:"Varrock Armour 3 is legitimately useful for long-term Smithing training. The 10% double bar chance at any furnace saves significant ore cost over thousands of bars."},
-
-  {title:"Complete One Elite Clue Scroll",desc:"Elite clues are the hardest tier of Treasure Trails. They involve combat, coordinate digging, scan clues across large areas, and brutal emote requirements. Today you finish one.",tip:"Elite clues require killing specific monsters, wearing specific gear for emotes, and sometimes having high skills. Have the wiki open throughout.",cat:"challenge",diff:"hard",guide:["Get an Elite Clue from a boss like Cerberus, Zulrah, Kalphite Queen, or from pickpocketing elves.","Open the clue and begin. Elite clues average <b>5-7 steps</b> but each step is more complex than hard clues.","Some steps require killing the double agent NPC after performing an emote — bring combat gear.","Scan clues give you a large area to search. Use the wiki's coordinate tool to pinpoint dig locations.","Open the elite casket. You now have a realistic chance at <b>ranger boots, 3rd age gear, or gilded armour</b>."],note:"Elite clue rewards include 3rd age items worth tens of millions and exclusive gilded armour. The average value is around 200k-500k but the range is enormous. Worth doing whenever you have one."},
-
-  {title:"Navigate the Stronghold of Security Floor 4 Without Food",desc:"The Stronghold of Security's deepest floor has aggressive Ankous that hit hard and fast. Reach the gift box at the bottom without eating anything.",tip:"Ankous can combo-eat you in a few ticks at low HP. Run past them rather than fighting if you're taking too much damage.",cat:"challenge",diff:"medium",guide:["Enter the <b>Stronghold of Security</b> in Barbarian Village. Answer the security questions at each gate.","On floor 4, equip your best armour and <b>do not eat any food</b>.","The monsters on floor 4 (Ankous) are aggressive and can hit up to 8 frequently. Keep moving toward the center.","Run through rather than fighting where possible. The prize chest is in the middle.","Collect the 10,000 GP reward and boots without having touched any food."],note:"This is harder than it sounds. Ankous on level 4 hit consistently. You need decent Defence or quick movement to survive. The challenge is more about knowing when to run versus fight."},
-
-  {title:"Kill 25 Abyssal Demons on a Slayer Task Without Missing a Drop",desc:"Abyssal Demons are excellent Slayer monsters but the drops scatter fast. Today you pick up every single drop from 25 kills without leaving anything on the ground.",tip:"Use a looting bag if you have one. Ashes from alching runes pile up fast. Sort your inventory before the task begins.",cat:"combat",diff:"medium",guide:["Get assigned <b>Abyssal Demons</b> from a Slayer master (requires 85 Slayer).","Head to the Slayer Tower in Morytania (Canifis area) or the Catacombs of Kourend.","Kill 25 demons and pick up <b>every single item</b> that drops — ashes, noted items, rune pieces, shards.","Your inventory will fill up fast. Bank between kills if you need to but track that nothing was skipped.","At the end, you should have a full haul including any Abyssal Whip or Abyssal Dagger drops if you got lucky."],note:"The challenge here is discipline, not difficulty. Abyssal Demons drop ensouled abyssal heads, various runes, coins, and occasionally whips or daggers. Missing drops feels physically painful once you've committed to this rule."},
-
-  {title:"Do a Full Birdhouse Run Then Immediately Plant a New Tree Run",desc:"Stack two of the most recommended passive activities back to back. Reset your birdhouses, then immediately do a full tree run before the birdhouses are ready.",tip:"You can do both in under 15 minutes. The community consensus is this combo is one of the best time-to-XP investments in the game.",cat:"skilling",diff:"easy",guide:["Travel to <b>Fossil Island</b> (requires Bone Voyage completion).","Collect your existing birdhouses if they're ready. Replace all four with fresh birdhouses and seeds.","Immediately open your tree run route: <b>Lumbridge, Varrock, Falador, Taverley, Gnome Stronghold</b>.","Check each tree patch. If any are fully grown, cut them down and replant. Use <b>Ultracompost</b> on all patches.","You've done your birdhouses and tree run in one efficient session. Come back in 80 minutes for the birdhouse loot."],note:"The combination of birdhouse runs and tree runs is a staple of efficient OSRS play. The community calls this a 'daily routine' for a reason. Trees give enormous Farming XP per hour when you factor in how little active time they take."},
-
-  {title:"Kill the Chaos Fanatic Without Using a Crossbow or Staff",desc:"The Chaos Fanatic in the Wilderness is a mage boss who fires explosive orbs. Fight him with only melee or a bow today — no crossbow, no staff.",tip:"He's most commonly done with a blowpipe but that counts as ranged, not a crossbow. Shortbows are fine. The challenge is avoiding staff/crossbow reliance.",cat:"combat",diff:"medium",guide:["The <b>Chaos Fanatic</b> is located at level 38 Wilderness west of the Lava Maze.","Bring your <b>melee or shortbow setup</b>. Do not bring a crossbow or any staff.","He uses magic attacks and drops a Malediction Shard on rare occasions, along with ancient staves.","Kill him and collect drops. Watch the minimap for player killers — this is the Wilderness.","Teleport out immediately after the kill or run south to safety."],note:"The Chaos Fanatic is commonly done with a blowpipe or magic. Forcing melee or a shortbow makes the fight genuinely trickier since his magic attacks hit hard without a staff defence bonus."},
-
-  {title:"Obtain 3 Unique Collection Log Slots in One Day",desc:"Open your Collection Log and pick a category you haven't fully completed. Farm that content until you unlock 3 new slots you didn't have this morning.",tip:"Pick a category with achievable drops rather than chasing ultra-rares. Beginner clue scroll uniques, Bryophyta drops, and Mimic drops are all fast to accumulate.",cat:"challenge",diff:"medium",guide:["Open your <b>Collection Log</b> via the Adventure Log interface.","Browse the categories and find one where you're missing several accessible items.","Good targets: Beginner Clue Scrolls (16 unique slots, fast to get), Obor drops, Bryophyta drops, or any boss you can kill consistently.","Farm the chosen source until you've unlocked <b>3 new unique slots</b> today.","Screenshot your collection log before and after to track the progress."],note:"The collection log has 1,904 total slots. Even filling 3 per day means 635 days to complete it from scratch. The point is building the habit of actively chasing it rather than playing passively."},
-
-  {title:"Complete the Fremennik Medium Achievement Diary",desc:"The Fremennik Diary covers Rellekka, Waterbirth, and surrounding areas. The medium tier rewards the Fremennik Sea Boots 2 which offer free teleports to Waterbirth Island.",tip:"You'll need around 40-50 in several skills and completion of The Fremennik Trials quest before you can start.",cat:"challenge",diff:"medium",guide:["Requirements: <b>Fremennik Trials quest</b>, approximately <b>40-50 in combat skills and some gathering skills</b>.","Open the <b>Achievement Diary</b> and select Fremennik Medium tasks.","Notable tasks: kill a Rock Crab, smith a Helm of Neitiznot, enter the Waterbirth dungeon, catch a swordfish.","Most tasks are doable in a single trip around the Rellekka and Waterbirth area.","Claim your <b>Fremennik Sea Boots 2</b> from Thorvald the Warrior in Rellekka."],note:"Fremennik Sea Boots 2 give free daily teleports to Waterbirth Island which is excellent for training at Rock Crabs. It's a modest reward but genuinely useful if you farm that area regularly."},
-
-  {title:"Survive TzHaar Fight Pit and Be the Last Player Standing",desc:"The Fight Pit in the TzHaar city is a PvP arena where players battle each other until one remains. Win a round.",tip:"Fight Pit is usually quiet but if you can't find players, ask in the world 2 TzHaar area. The FFA nature means even a lower-level player can win with smart movement.",cat:"minigame",diff:"medium",guide:["Travel to the <b>TzHaar city</b> on Karamja (either via the underground entrance from Karamja volcano or the STASH entrance from the surface).","Locate the <b>Fight Pit</b> and enter. You need at least one other player to start.","The arena is free-for-all. Fight everyone until only you remain.","There are no stats, gear, or prayer restrictions. Bring your best setup.","Win the round and collect your Tokkul reward from the chest at the end."],note:"The Fight Pit is one of the oldest PvP activities in OSRS and barely anyone does it anymore. Winning one is genuinely unusual. If you manage it, that's worth noting."},
-
-  {title:"Kill Callisto or Artio Without Bringing a Spec Weapon",desc:"Callisto (Wilderness) and Artio (Weiss Dungeon) are bear bosses that drop the dragon pickaxe and claws. Today you kill one without using any special attack weapon.",tip:"Most players bring a Viggora's chainmace or a spec weapon. Going without changes your kill time but makes it a more honest melee fight.",cat:"combat",diff:"hard",guide:["Choose between <b>Callisto</b> (level 44 Wilderness, higher risk) or <b>Artio</b> (inside the Weiss area, safer alternative).","Leave your special attack weapon at the bank. Bring only your main melee weapon and armour.","Callisto and Artio both use heavy melee attacks. Protect from Melee helps significantly.","Kill the boss using only standard attacks. It will take longer. That's the point.","Collect drops — dragon pickaxe, claws, and zenyte shards are all on the table."],note:"Artio is the wilderness-safe version found at the Weiss dungeon. She was added alongside Spindel and Vet'ion Prime as safer alternatives to the deep Wilderness versions. Same drops, significantly less grief from PKers."},
-
-  {title:"Complete a Medium Clue Scroll Obtained From a Pickpocket",desc:"Train Thieving and complete a clue scroll using only skills. Get a medium clue from pickpocketing a master farmer, HAM member, or Palidino and finish it today.",tip:"Master Farmers near Draynor Village have a reasonable medium clue drop rate. Set up at the patch and pickpocket until one appears.",cat:"skilling",diff:"easy",guide:["Head to the <b>Master Farmer</b> just north of Draynor Village (requires 38 Thieving).","Pickpocket repeatedly until you receive a <b>medium clue scroll</b>.","Alternatively, HAM members in the Lumbridge cellar drop medium clues at lower Thieving levels (15+).","Once you have the clue, follow the instructions. Medium clues have 3-5 steps and are generally straightforward.","Finish the clue and open the casket."],note:"Getting the clue through Thieving rather than from a monster makes it feel earned twice over. Master Farmers also drop valuable herb seeds as a side benefit of the pickpocketing session."},
-
-  {title:"Earn 500k GP From Killing Only One Type of Monster",desc:"Pick a single monster and grind it for one session. Bank everything that drops and sell it all. Hit 500,000 GP profit without switching targets.",tip:"Hill Giants, Blue Dragons, Lesser Demons, and Moss Giants are all reliably profitable. Green Dragons are fast GP but contested.",cat:"combat",diff:"medium",guide:["Choose your monster. For GP/hr balance, <b>Blue Dragons in Taverley Dungeon</b> (with dragonfire protection) or <b>Lesser Demons</b> in Karamja Dungeon are good picks.","Bring food, your best gear for that monster, and a large bank of time.","Kill exclusively that monster until your inventory is worth 500,000 GP (check prices on the GE app or wiki before you start).","Bank regularly. Sell everything at the end.","The challenge is commitment to a single source rather than hopping around."],note:"Blue Dragons drop noted dragon bones from the Taverley dungeon resource room (requires agility shortcut access). Each kill is worth around 3,000-4,000 GP. At that rate you need roughly 130-165 kills."},
-];
-
-function getDailyActivity() {
-  const key  = getDailyKey();
-  const seed = dateToSeed(key);
-  const rng  = seedRng(seed);
-  const idx  = Math.floor(rng() * DAILY_CHALLENGES.length);
-  return DAILY_CHALLENGES[idx];
-}
-
-function loadDailyChallenge() {
-  const key = getDailyKey();
-  const act = getDailyActivity();
-  const introIdx = dateToSeed(key) % DAILY_WOM_INTROS.length;
-
-  // Format the date nicely
-  const now = new Date();
-  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const dateStr = `${dayNames[now.getDay()]}, ${now.getDate()} ${monthNames[now.getMonth()]}`;
-  document.getElementById('dailyDateLabel').textContent = dateStr;
-
-  // WOM intro
-  document.getElementById('dailyWomIntro').textContent = DAILY_WOM_INTROS[introIdx];
-
-  // Render activity
-  const catClass = 'badge-' + act.cat;
-  const diffBadge = 'badge-' + act.diff;
-  const diffLabel = act.diff.charAt(0).toUpperCase() + act.diff.slice(1);
-  document.getElementById('dailyMeta').innerHTML =
-    `<span class="rs-badge ${catClass}">${act.cat.toUpperCase()}</span>` +
-    `<span class="rs-badge ${diffBadge} diff-badge">${diffLabel}</span>`;
-  document.getElementById('dailyTitle').textContent = act.title;
-  document.getElementById('dailyDesc').textContent  = act.desc;
-
-  const tipEl = document.getElementById('dailyTip');
-  if (act.tip) { tipEl.textContent = 'Tip: ' + act.tip; tipEl.style.display = 'block'; }
-  else { tipEl.style.display = 'none'; }
-
-  // Check if already completed today
-  let completedDays = [];
-  try { completedDays = JSON.parse(localStorage.getItem('wom_daily_completed') || '[]'); } catch(e) {}
-  const alreadyDone = completedDays.includes(key);
-
-  const btn = document.getElementById('dailyCompleteBtn');
-  const banner = document.getElementById('dailyDoneBanner');
-  if (alreadyDone) {
-    btn.disabled = true;
-    btn.textContent = '✓ Completed Today';
+  let completedDays=[];
+  try{completedDays=JSON.parse(localStorage.getItem('wom_daily_completed')||'[]');}catch(e){}
+  const alreadyDone=completedDays.includes(key);
+  const btn=document.getElementById('dailyCompleteBtn');
+  const banner=document.getElementById('dailyDoneBanner');
+  if(alreadyDone){
+    btn.disabled=true;
+    btn.textContent='✓ Completed Today';
     banner.classList.add('show');
-    document.getElementById('dailyDoneMsg').textContent = "You've already done today's task. Come back tomorrow for a new one. I'll have something ready.";
-  } else {
-    btn.disabled = false;
-    btn.textContent = '✓ Mark as Complete';
+    document.getElementById('dailyDoneMsg').textContent="You've already done today's task. Come back tomorrow for a new one.";
+  }else{
+    btn.disabled=false;
+    btn.textContent='✓ Mark as Complete';
     banner.classList.remove('show');
   }
-
-  // Store activity for guide toggle
-  window._dailyActivity = act;
-
-  // Build streak
+  window._dailyActivity=act;
   updateDailyStreak(completedDays);
-
-  // Build history grid
   buildHistoryGrid(completedDays);
 }
 
-function markDailyComplete() {
-  const key = getDailyKey();
-  let completedDays = [];
-  try { completedDays = JSON.parse(localStorage.getItem('wom_daily_completed') || '[]'); } catch(e) {}
-  if (!completedDays.includes(key)) {
+function markDailyComplete(){
+  const key=getDailyKey();
+  let completedDays=[];
+  try{completedDays=JSON.parse(localStorage.getItem('wom_daily_completed')||'[]');}catch(e){}
+  if(!completedDays.includes(key)){
     completedDays.push(key);
-    try { localStorage.setItem('wom_daily_completed', JSON.stringify(completedDays)); } catch(e) {}
+    try{localStorage.setItem('wom_daily_completed',JSON.stringify(completedDays));}catch(e){}
   }
-
-  const btn = document.getElementById('dailyCompleteBtn');
-  btn.disabled = true;
-  btn.textContent = '✓ Completed Today';
-
-  const banner = document.getElementById('dailyDoneBanner');
+  const btn=document.getElementById('dailyCompleteBtn');
+  btn.disabled=true;
+  btn.textContent='✓ Completed Today';
+  const banner=document.getElementById('dailyDoneBanner');
   banner.classList.add('show');
-
-  // Pick a WOM completion line
-  const completionLines = [
+  const completionLines=[
     "Good. I knew you had it in you. Probably.",
     "Well done. Come back tomorrow and I'll have another little job for you.",
     "About time. I've been waiting all day. Well done, adventurer.",
@@ -1511,77 +1664,122 @@ function markDailyComplete() {
     "Splendid. Same time tomorrow, if you can manage it.",
     "I had every confidence in you. Well. Most confidence.",
   ];
-  const idx = dateToSeed(key) % completionLines.length;
-  document.getElementById('dailyDoneMsg').textContent = completionLines[idx];
-
+  const idx=dateToSeed(key)%completionLines.length;
+  document.getElementById('dailyDoneMsg').textContent=completionLines[idx];
   updateDailyStreak(completedDays);
   buildHistoryGrid(completedDays);
 }
 
-function updateDailyStreak(completedDays) {
-  // Count consecutive days ending today or yesterday
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (completedDays.includes(k)) {
-      streak++;
-    } else if (i === 0) {
-      // Haven't done today yet — check if yesterday keeps streak alive
-      break;
-    } else {
-      break;
-    }
+function updateDailyStreak(completedDays){
+  let streak=0;
+  const today=new Date();
+  for(let i=0;i<365;i++){
+    const d=new Date(today);
+    d.setDate(d.getDate()-i);
+    const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(completedDays.includes(k)){streak++;}
+    else if(i===0){break;}
+    else{break;}
   }
-  document.getElementById('dailyStreakVal').textContent = streak;
+  document.getElementById('dailyStreakVal').textContent=streak;
 }
 
-function buildHistoryGrid(completedDays) {
-  const grid = document.getElementById('dailyHistoryGrid');
-  grid.innerHTML = '';
-  const today = new Date();
-  for (let i = 27; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dayNum = d.getDate();
-    const done = completedDays.includes(k);
-    const isToday = i === 0;
-    const dot = document.createElement('div');
-    dot.className = 'day-dot' + (done ? ' completed' : '') + (isToday ? ' today' : '');
-    dot.textContent = dayNum;
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    dot.title = `${dayNum} ${monthNames[d.getMonth()]}${done ? ' — completed' : ''}`;
+function buildHistoryGrid(completedDays){
+  const grid=document.getElementById('dailyHistoryGrid');
+  grid.innerHTML='';
+  const today=new Date();
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(let i=27;i>=0;i--){
+    const d=new Date(today);
+    d.setDate(d.getDate()-i);
+    const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const done=completedDays.includes(k);
+    const isToday=i===0;
+    const dot=document.createElement('div');
+    dot.className='day-dot'+(done?' completed':'')+(isToday?' today':'');
+    dot.textContent=d.getDate();
+    dot.title=d.getDate()+' '+monthNames[d.getMonth()]+(done?' — completed':'');
     grid.appendChild(dot);
   }
 }
 
-let dailyGuideOpen = false;
-function toggleDailyGuide() {
-  dailyGuideOpen = !dailyGuideOpen;
-  const panel = document.getElementById('dailyGuidePanel');
-  const btn   = document.getElementById('dailyGuideBtn');
-  const act   = window._dailyActivity;
-  if (dailyGuideOpen && act && act.guide && act.guide.length) {
-    document.getElementById('dailyGuideSteps').innerHTML = act.guide.map((s, i) =>
-      `<div class="guide-step"><div class="guide-num">${i+1}</div><div class="guide-text">${s}</div></div>`
+let dailyGuideOpen=false;
+function toggleDailyGuide(){
+  dailyGuideOpen=!dailyGuideOpen;
+  const panel=document.getElementById('dailyGuidePanel');
+  const btn=document.getElementById('dailyGuideBtn');
+  const act=window._dailyActivity;
+  if(dailyGuideOpen&&act&&act.guide&&act.guide.length){
+    document.getElementById('dailyGuideSteps').innerHTML=act.guide.map((s,i)=>
+      '<div class="guide-step"><div class="guide-num">'+(i+1)+'</div><div class="guide-text">'+s+'</div></div>'
     ).join('');
-    const noteEl = document.getElementById('dailyGuideNote');
-    if (act.note) { noteEl.textContent = act.note; noteEl.style.display = 'block'; }
-    else { noteEl.style.display = 'none'; }
+    const noteEl=document.getElementById('dailyGuideNote');
+    if(act.note){noteEl.textContent=act.note;noteEl.style.display='block';}
+    else{noteEl.style.display='none';}
     panel.classList.add('open');
-    btn.textContent = 'Alright alright, enough advice.';
-  } else {
+    btn.textContent="Alright alright, enough advice.";
+  }else{
     panel.classList.remove('open');
-    btn.textContent = '? Show Guide';
-    dailyGuideOpen = false;
+    btn.textContent='? Show Guide';
+    dailyGuideOpen=false;
   }
 }
 
-// Load daily challenge on page load too so it's ready if the tab is opened
+// Pre-load daily on page init
 loadDailyChallenge();
+
+// ==================== MARK AS DONE SYSTEM ====================
+let doneTasks = [];
+let hideDone  = false;
+
+function loadDoneTasks(){
+  try{ doneTasks = JSON.parse(localStorage.getItem('wom_done_tasks') || '[]'); }
+  catch(e){ doneTasks = []; }
+  updateDoneCounter();
+}
+
+function saveDoneTasks(){
+  try{ localStorage.setItem('wom_done_tasks', JSON.stringify(doneTasks)); }
+  catch(e){}
+}
+
+function toggleTaskDone(){
+  if(!currentActivity) return;
+  const title = currentActivity.title;
+  const btn   = document.getElementById('doneBtn');
+  const card  = document.getElementById('resultCard');
+  if(doneTasks.includes(title)){
+    doneTasks = doneTasks.filter(t => t !== title);
+    btn.className  = 'done-btn undone';
+    btn.innerHTML  = '&#10003; Mark Done';
+    card.classList.remove('task-done');
+  } else {
+    doneTasks.push(title);
+    btn.className  = 'done-btn isdone';
+    btn.innerHTML  = '&#10003; Done';
+    card.classList.add('task-done');
+  }
+  saveDoneTasks();
+  updateDoneCounter();
+}
+
+function updateDoneCounter(){
+  const counter = document.getElementById('doneCounter');
+  const n = doneTasks.length;
+  counter.textContent = n + ' completed';
+  counter.classList.toggle('visible', n > 0);
+}
+
+function toggleHideDone(){
+  hideDone = !hideDone;
+  const chip = document.getElementById('hideDoneChip');
+  chip.className = 'filter-chip hide-done-chip ' + (hideDone ? 'on' : 'off');
+}
+
+// Init
+loadDoneTasks();
+
+
 </script>
 </body>
 </html>
