@@ -712,8 +712,8 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
   .trivia-opt{min-height:54px;}
   .a11y-trigger{width:46px;height:46px;font-size:22px;}
   /* Portrait shrinks a bit more */
-  .osrs-npc-portrait{width:100px;}
-  .wom-photo{width:100%;height:100%;object-fit:cover;}
+  .osrs-npc-portrait{width:90px;}
+  .wom-photo{width:90px;height:100%;object-fit:cover;object-position:center 20%;}
   /* Site title comfortable at 800px wide */
   .site-title{font-size:1.1rem;}
   .stats-ribbon{justify-content:center;}
@@ -725,14 +725,10 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
 @media(max-width:599px){
   .site-title{font-size:.85rem;letter-spacing:.5px;}
   .site-sub{font-size:.9rem;}
-  /* Stack portrait above speech */
-  .osrs-dialogue-body{flex-direction:column;}
-  .osrs-npc-portrait{
-    width:100%;height:140px;
-    border-right:none;border-bottom:2px solid #181008;
-    align-items:stretch;
-  }
-  .wom-photo{width:100%;height:140px;object-fit:cover;object-position:center 15%;}
+  /* Keep side-by-side layout — just tighter portrait */
+  .osrs-dialogue-body{flex-direction:row;}
+  .osrs-npc-portrait{width:80px;height:auto;}
+  .wom-photo{width:80px;height:100%;min-height:110px;object-fit:cover;object-position:center 20%;}
   .osrs-npc-speech{font-size:.95rem;}
   .osrs-click-prompt{font-size:.36rem;}
   /* Single-column trivia options */
@@ -769,8 +765,10 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
   .site-sub{font-size:.82rem;}
   /* Dialogue even more compact */
   .osrs-dialogue-titlebar{font-size:.42rem;padding:4px 8px;}
-  .osrs-npc-portrait{height:120px;width:100%;}
-  .wom-photo{width:100%;height:120px;object-fit:cover;object-position:center 15%;}
+  .osrs-npc-portrait{width:70px;height:auto;}
+  .wom-photo{width:70px;height:100%;min-height:100px;object-fit:cover;object-position:center 20%;}
+  .osrs-dialogue-body{min-height:100px;}
+  .osrs-npc-speech{min-height:0;}
   .osrs-npc-speech{font-size:.9rem;line-height:1.5;}
   .osrs-dialogue-text{padding:.7rem .8rem .6rem;}
   .osrs-click-prompt{font-size:.32rem;}
