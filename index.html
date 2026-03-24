@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="The Wise Old Man's Task Board — an OSRS activity generator, trivia challenge, and learning tool for Old School RuneScape players of every level.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self';">
 <title>The Wise Old Man's Task Board | OSRS Activity Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IM+Fell+English:ital@0;1&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -846,7 +847,7 @@ body.reduce-motion *{animation-duration:.001ms!important;transition-duration:.00
       <h3 id="modalHeading">Support the Site</h3>
       <p id="modalDesc">Head to Ko-fi and leave your in-game name in the message. We'll add you to the Supporters Wall within 24 hours.</p>
       <div id="modalKofiSection">
-        <button class="modal-submit" id="modalKofiBtn" onclick="window.open(window._kofiUrl||'https://ko-fi.com/osrstaskboard','_blank');closeModal()">Open Ko-fi &#9758;</button>
+        <button class="modal-submit" id="modalKofiBtn" onclick="window.open('https://ko-fi.com/osrstaskboard','_blank');closeModal()">Open Ko-fi &#9758;</button>
         <p class="modal-note">Leave your in-game name in the Ko-fi message so we know who to add to the wall.</p>
       </div>
       <div id="modalFreeSection" style="display:none">
@@ -1327,12 +1328,13 @@ document.getElementById('womQuote').style.transition = 'opacity .15s';
 
 // ==================== FILTERS ====================
 function buildFilters(){
-  const g = document.getElementById('filterGrid'); g.innerHTML='';
+  const g = document.getElementById('filterGrid'); g.replaceChildren();
   Object.keys(CATEGORIES).forEach(key=>{
     const on = filters[key];
     const c = document.createElement('button');
     c.className='filter-chip '+(on?'on':'off'); c.setAttribute('data-key',key);
-    c.innerHTML=`<span class="chip-dot"></span>${CATEGORIES[key].label}`;
+    const dot=document.createElement('span'); dot.className='chip-dot'; c.appendChild(dot);
+    c.appendChild(document.createTextNode(CATEGORIES[key].label));
     c.onclick=()=>toggleFilter(key); g.appendChild(c);
   });
 }
@@ -1390,13 +1392,28 @@ function rollActivity(){
   const card=document.getElementById('resultCard');
   if(doneTasks.includes(pick.title)){
     doneBtn.className='done-btn isdone';
-    doneBtn.innerHTML='&#10003; Done';
+    doneBtn.textContent='\u2713 Done';
     card.classList.add('task-done');
   }else{
     doneBtn.className='done-btn undone';
-    doneBtn.innerHTML='&#10003; Mark Done';
+    doneBtn.textContent='\u2713 Mark Done';
     card.classList.remove('task-done');
   }
+}
+// Safely renders text that may contain <b>…</b> markup without injecting arbitrary HTML.
+function renderGuideText(text){
+  const frag=document.createDocumentFragment();
+  const parts=text.split(/(<b>|<\/b>)/);
+  let bold=false;
+  parts.forEach(p=>{
+    if(p==='<b>'){bold=true;}
+    else if(p==='</b>'){bold=false;}
+    else if(p){
+      if(bold){const b=document.createElement('b');b.textContent=p;frag.appendChild(b);}
+      else{frag.appendChild(document.createTextNode(p));}
+    }
+  });
+  return frag;
 }
 function showResult(act){
   document.getElementById('resultEmpty').style.display='none';
@@ -1404,9 +1421,10 @@ function showResult(act){
   const catClass='badge-'+act.cat;
   const diffBadge='badge-'+act.diff;
   const diffLabel=act.diff.charAt(0).toUpperCase()+act.diff.slice(1);
-  document.getElementById('resultMeta').innerHTML=
-    `<span class="rs-badge ${catClass}">${act.cat.toUpperCase()}</span>`+
-    `<span class="rs-badge ${diffBadge} diff-badge">${diffLabel}</span>`;
+  const metaEl=document.getElementById('resultMeta');
+  metaEl.replaceChildren();
+  const catSpan=document.createElement('span'); catSpan.className='rs-badge '+catClass; catSpan.textContent=act.cat.toUpperCase(); metaEl.appendChild(catSpan);
+  const diffSpan=document.createElement('span'); diffSpan.className='rs-badge '+diffBadge+' diff-badge'; diffSpan.textContent=diffLabel; metaEl.appendChild(diffSpan);
   document.getElementById('resultTitle').textContent=act.title;
   document.getElementById('resultDesc').textContent=act.desc;
   const tipEl=document.getElementById('resultTip');
@@ -1421,9 +1439,13 @@ function toggleGuide(){
   const panel=document.getElementById('guidePanel');
   const btn=document.getElementById('hintBtn');
   if(guideOpen&&currentActivity&&currentActivity.guide&&currentActivity.guide.length){
-    document.getElementById('guideSteps').innerHTML=currentActivity.guide.map((s,i)=>
-      `<div class="guide-step"><div class="guide-num">${i+1}</div><div class="guide-text">${s}</div></div>`
-    ).join('');
+    const stepsEl=document.getElementById('guideSteps'); stepsEl.replaceChildren();
+    currentActivity.guide.forEach((s,i)=>{
+      const row=document.createElement('div'); row.className='guide-step';
+      const num=document.createElement('div'); num.className='guide-num'; num.textContent=i+1;
+      const txt=document.createElement('div'); txt.className='guide-text'; txt.appendChild(renderGuideText(s));
+      row.appendChild(num); row.appendChild(txt); stepsEl.appendChild(row);
+    });
     const noteEl=document.getElementById('guideNote');
     if(currentActivity.note){noteEl.textContent=currentActivity.note;noteEl.style.display='block';}
     else{noteEl.style.display='none';}
@@ -1435,8 +1457,13 @@ function toggleGuide(){
 function addHistory(title){
   history.unshift(title); if(history.length>5)history.pop();
   document.getElementById('historySection').style.display='block';
-  document.getElementById('historyList').innerHTML=history.map(t=>
-    `<div class="history-item"><div class="history-dot"></div>${t}</div>`).join('');
+  const list=document.getElementById('historyList'); list.replaceChildren();
+  history.forEach(t=>{
+    const item=document.createElement('div'); item.className='history-item';
+    const dot=document.createElement('div'); dot.className='history-dot';
+    item.appendChild(dot); item.appendChild(document.createTextNode(t));
+    list.appendChild(item);
+  });
 }
 
 // ==================== TRIVIA ====================
@@ -1451,7 +1478,7 @@ function loadTrivia(){
   const q=TRIVIA[idx];
   document.getElementById('triviaQnum').textContent='Question '+triviaQNum;
   document.getElementById('triviaQuestion').textContent=q.q;
-  const opts=document.getElementById('triviaOptions'); opts.innerHTML='';
+  const opts=document.getElementById('triviaOptions'); opts.replaceChildren();
   q.opts.forEach((opt,i)=>{
     const b=document.createElement('button'); b.className='trivia-opt'; b.textContent=opt;
     b.onclick=()=>answerTrivia(i,b); opts.appendChild(b);
@@ -1611,9 +1638,9 @@ function loadDailyChallenge(){
   const catClass='badge-'+act.cat;
   const diffBadge='badge-'+act.diff;
   const diffLabel=act.diff.charAt(0).toUpperCase()+act.diff.slice(1);
-  document.getElementById('dailyMeta').innerHTML=
-    '<span class="rs-badge '+catClass+'">'+act.cat.toUpperCase()+'</span>'+
-    '<span class="rs-badge '+diffBadge+' diff-badge">'+diffLabel+'</span>';
+  const dailyMetaEl=document.getElementById('dailyMeta'); dailyMetaEl.replaceChildren();
+  const dCatSpan=document.createElement('span'); dCatSpan.className='rs-badge '+catClass; dCatSpan.textContent=act.cat.toUpperCase(); dailyMetaEl.appendChild(dCatSpan);
+  const dDiffSpan=document.createElement('span'); dDiffSpan.className='rs-badge '+diffBadge+' diff-badge'; dDiffSpan.textContent=diffLabel; dailyMetaEl.appendChild(dDiffSpan);
   document.getElementById('dailyTitle').textContent=act.title;
   document.getElementById('dailyDesc').textContent=act.desc;
   const tipEl=document.getElementById('dailyTip');
@@ -1684,7 +1711,7 @@ function updateDailyStreak(completedDays){
 
 function buildHistoryGrid(completedDays){
   const grid=document.getElementById('dailyHistoryGrid');
-  grid.innerHTML='';
+  grid.replaceChildren();
   const today=new Date();
   const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   for(let i=27;i>=0;i--){
@@ -1708,9 +1735,13 @@ function toggleDailyGuide(){
   const btn=document.getElementById('dailyGuideBtn');
   const act=window._dailyActivity;
   if(dailyGuideOpen&&act&&act.guide&&act.guide.length){
-    document.getElementById('dailyGuideSteps').innerHTML=act.guide.map((s,i)=>
-      '<div class="guide-step"><div class="guide-num">'+(i+1)+'</div><div class="guide-text">'+s+'</div></div>'
-    ).join('');
+    const dStepsEl=document.getElementById('dailyGuideSteps'); dStepsEl.replaceChildren();
+    act.guide.forEach((s,i)=>{
+      const row=document.createElement('div'); row.className='guide-step';
+      const num=document.createElement('div'); num.className='guide-num'; num.textContent=i+1;
+      const txt=document.createElement('div'); txt.className='guide-text'; txt.appendChild(renderGuideText(s));
+      row.appendChild(num); row.appendChild(txt); dStepsEl.appendChild(row);
+    });
     const noteEl=document.getElementById('dailyGuideNote');
     if(act.note){noteEl.textContent=act.note;noteEl.style.display='block';}
     else{noteEl.style.display='none';}
@@ -1749,12 +1780,12 @@ function toggleTaskDone(){
   if(doneTasks.includes(title)){
     doneTasks = doneTasks.filter(t => t !== title);
     btn.className  = 'done-btn undone';
-    btn.innerHTML  = '&#10003; Mark Done';
+    btn.textContent  = '\u2713 Mark Done';
     card.classList.remove('task-done');
   } else {
     doneTasks.push(title);
     btn.className  = 'done-btn isdone';
-    btn.innerHTML  = '&#10003; Done';
+    btn.textContent  = '\u2713 Done';
     card.classList.add('task-done');
   }
   saveDoneTasks();
